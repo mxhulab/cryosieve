@@ -1,0 +1,6 @@
+data/
+dist/
+test/
+__pycache__/
+*.egg-info/
+next.md
