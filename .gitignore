@@ -4,3 +4,5 @@ test/
 __pycache__/
 *.egg-info/
 next.md
+.arcconfig
+.DS_Store

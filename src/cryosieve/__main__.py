@@ -14,6 +14,7 @@ def parse_argument():
     parser.add_argument('--num_gpus',             type = int,   default  = torch.cuda.device_count(), help = 'number of gpus to execute the cryosieve program.')
     parser.add_argument('--i',                    type = str,   required = True,  help = 'input star file path.')
     parser.add_argument('--o',                    type = str,   required = True,  help = 'output path prefix.')
+    parser.add_argument('--directory',            type = str,   default  = './',  help = 'directory of particles, empty (current directory) by default.')
     parser.add_argument('--angpix',               type = float, required = True,  help = 'pixelsize in Angstrom.')
     parser.add_argument('--sym',                  type = str,   default  = 'c1',  help = 'molecular symmetry.')
     parser.add_argument('--num_iters',            type = int,   default  = 10,    help = 'number of iterations for applying CryoSieve.')
@@ -23,7 +24,6 @@ def parse_argument():
     parser.add_argument('--mask',                 type = str,   required = True,  help = 'mask file path.')
     parser.add_argument('--balance',              action = 'store_true',          help = 'make remaining particles in different subsets in same size.')
     return parser.parse_args()
-    # parser.add_argument('--directory',          type = str,   default  = './',  help = 'directory of particles, current directory by default.')
 
 def run_command(commands, msg = '', stdout = None):
     time0 = time()
@@ -54,14 +54,14 @@ def main():
         pass
 
     # go.
-    frequences = np.linspace(1.0 / args.frequency_start, 1.0 / args.frequency_end, args.num_iters)
+    frequences = 1 / np.linspace(1.0 / args.frequency_start, 1.0 / args.frequency_end, args.num_iters)
     overall_retention_ratio = 1.0
     for i in range(args.num_iters):
-        print(f'[ITER {i}][Overall Retaining ratio: {overall_retention_ratio * 100:.2f}%][Threshold frequency : {1 / frequences[i]:.2f}A]')
+        print(f'[ITER {i}][Overall Retaining ratio: {overall_retention_ratio * 100:.2f}%][Threshold frequency : {frequences[i]:.2f}A]')
 
         # reconstruct.
-        commands = [f'mpirun -n {args.num_procs} {args.reconstruct_software} --i {args.o}_iter{i}.star --sym {args.sym} --ctf --o {args.o}_iter{i}_half1.mrc --subset 1 --iter 2 >{args.o}_iter{i}_reconstruct_half1.txt',
-                    f'mpirun -n {args.num_procs} {args.reconstruct_software} --i {args.o}_iter{i}.star --sym {args.sym} --ctf --o {args.o}_iter{i}_half2.mrc --subset 2 --iter 2 >{args.o}_iter{i}_reconstruct_half2.txt']
+        commands = [f'mpirun -n {args.num_procs} {args.reconstruct_software} --i {args.o}_iter{i}.star --o {args.o}_iter{i}_half1.mrc --angpix {args.angpix} --sym {args.sym} --ctf true --subset 1 >{args.o}_iter{i}_reconstruct_half1.txt',
+                    f'mpirun -n {args.num_procs} {args.reconstruct_software} --i {args.o}_iter{i}.star --o {args.o}_iter{i}_half2.mrc --angpix {args.angpix} --sym {args.sym} --ctf true --subset 2 >{args.o}_iter{i}_reconstruct_half2.txt']
         run_command(commands, f'RECONSTRUCT_DONE, ITERATION {i}')
 
         # postprocess.
@@ -70,7 +70,7 @@ def main():
             run_command([f'{args.postprocess_software} --mask {args.mask} --i {args.o}_iter{i}_half1.mrc --i2 {args.o}_iter{i}_half2.mrc --o {args.o}_postprocess_iter{i}/iter{i} --angpix {args.angpix} --auto_bfac --autob_lowres 10 >{args.o}_postprocess_iter{i}.txt'], f'POSTPROCESS_DONE, ITERATION {i}')
 
         # sieve.
-        run_command([f'torchrun --standalone --nnodes=1 --nproc_per_node={args.num_gpus} -m cryosieve.core --i {args.o}_iter{i}.star --o {args.o}_iter{i + 1}.star --volume {args.o}_iter{i}_half1.mrc --volume {args.o}_iter{i}_half2.mrc --mask {args.mask} --angpix {args.angpix} --retention-ratio {args.retention_ratio} --frequency {frequences[i]} {"--balance" if args.balance else ""} >{args.o}_iter{i}_sieve.txt'], f'SIEVE_DONE, ITERATION {i}')
+        run_command([f'torchrun --standalone --nnodes=1 --nproc_per_node={args.num_gpus} -m cryosieve.core --i {args.o}_iter{i}.star --o {args.o}_iter{i + 1}.star --directory {args.directory} --angpix {args.angpix} --volume {args.o}_iter{i}_half1.mrc --volume {args.o}_iter{i}_half2.mrc --mask {args.mask} --retention-ratio {args.retention_ratio} --frequency {frequences[i]:.2f} {"--balance" if args.balance else ""} >{args.o}_iter{i}_sieve.txt'], f'SIEVE_DONE, ITERATION {i}')
         overall_retention_ratio *= args.retention_ratio
 
     print('EXECUTION IN SUCCESS')

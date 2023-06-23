@@ -12,7 +12,7 @@ def parse_argument():
     parser = argparse.ArgumentParser(description = 'CryoSieve: a particle sorting and sieving software for single particle analysis in cryo-EM.')
     parser.add_argument('--i',               type = str,   required = True,  help = 'input star file path.')
     parser.add_argument('--o',               type = str,   required = True,  help = 'output star file path.')
-    parser.add_argument('--directory',       type = str,   default  = './',  help = 'directory of particles, current directory by default.')
+    parser.add_argument('--directory',       type = str,   default  = './',  help = 'directory of particles, empty (current directory) by default.')
     parser.add_argument('--angpix',          type = float, required = True,  help = 'pixelsize in Angstrom.')
     parser.add_argument('--volume',          type = str,   required = True,  action = 'append', help = 'list of volume file paths.')
     parser.add_argument('--mask',            type = str,   required = False, help = 'mask file path.')
