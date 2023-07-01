@@ -6,19 +6,26 @@ CryoSieve is a particle sorting and sieving software for single particle analysi
 
 # Installation
 
-CryoSieve is an open source software developed in Python programming language and released as a Python package.
+CryoSieve is an open source software developed in Python programming language and released as a Python package. The source code can be found [on GitHub](OUR_GITHUB_REPO).
 
 We recommend using Python version >= 3.7 and NVIDIA CUDA library installed in user's environment. The package dependency includes the following:
 ```
 numpy>=1.18
 mrcfile>=1.2
-torch>=1.10
+starfile>=0.4
 cupy>=10
+torch>=1.10
 ```
-To install CryoSieve, run the following command:
+
+To install CryoSieve using pip, run the following command:
 ```
-pip install CryoSieve
+pip install cryosieve
 ```
+Or using conda, run the following command:
+```
+conda install --channel conda-forge cryosieve
+```
+We recommand installing CuPy and PyTorch first, since their installation highly depends on user's environment. The PyTorch package should be CUDA-capable.
 
 # Tutorial
 
@@ -27,64 +34,64 @@ pip install CryoSieve
 To ensure you have correctly installed CryoSieve and understand how to utilize it, we highly recommand running CryoSieve on this [toy example](URL). Please follow the steps below:
 
 1. Download the dataset and unzip it to any directory, e.g., `~/toy/`.
-1. Change the working directory to this directory:
+2. Change the working directory to this directory:
 ```
 cd ~/toy/
 ```
-1. Run the following command:
+3. Run the following command:
 ```
 cryosieve-core --i CNG.star --o my_CNG_1.star --angpix 1.32 --volume CNG_A.mrc --volume CNG_B.mrc --mask CNG_mask.mrc --retention-ratio 0.8 --frequency 40
 ```
 
-If you run it correctly, it should produce two star files named `my_CNG_1.star` and `my_CNG_1_sieved.star`, containing information of remained particles and sieved particles, respectively. You may compare them with given `CNG_1.star` and `CNG_1_sieved.star`, and they are expected to be the same.
+If you run it correctly, it should produce two star files named `my_CNG_1.star` and `my_CNG_1_sieved.star`, containing information of remained particles and sieved particles, respectively. You may compare them with given `CNG_1.star` and `CNG_1_sieved.star`, and they are expected to contain same particles.
 
-## Arguments of CryoSieve
+## Arguments of CryoSieve core
+
+The program `cryosieve-core` is the core particle sieving process.
 
 ```
-$ CryoSieve -h
-usage: CryoSieve [-h] -i INPUT -d DIRECTORY -p PIXELSIZE -v VOLUME [-m MASK] -r RATIO [-f FREQUENCY] -o OUTPUT
+$ cryosieve-core -h
+usage: cryosieve-core [-h] --i I --o O [--directory DIRECTORY] --angpix ANGPIX --volume VOLUME [--mask MASK] [--retention_ratio RETENTION_RATIO] --frequency
+                      FREQUENCY [--balance] [--num_gpus NUM_GPUS]
 
-CryoSieve: a particle sorting and sieving software for single particle analysis in cryo-EM.
+CryoSieve core.
 
 options:
   -h, --help            show this help message and exit
-  -i INPUT, --input INPUT
-                        input star file path.
-  -d DIRECTORY, --directory DIRECTORY
-                        directory of particles.
-  -p PIXELSIZE, --pixelsize PIXELSIZE
-                        particle pixelsize.
-  -v VOLUME, --volume VOLUME
-                        list of volume file paths.
-  -m MASK, --mask MASK  mask file path.
-  -r RATIO, --ratio RATIO
-                        fraction of sieved particles.
-  -f FREQUENCY, --frequency FREQUENCY
-                        cut-off high-pass frequency, 40 Angstrom by default.
-  -o OUTPUT, --output OUTPUT
-                        output star file path.
+  --i I                 input star file path.
+  --o O                 output star file path.
+  --directory DIRECTORY
+                        directory of particles, empty (current directory) by default.
+  --angpix ANGPIX       pixelsize in Angstrom.
+  --volume VOLUME       list of volume file paths.
+  --mask MASK           mask file path.
+  --retention_ratio RETENTION_RATIO
+                        fraction of retained particles, 0.8 by default.
+  --frequency FREQUENCY
+                        cut-off highpass frequency.
+  --balance             make retained particles in different subsets in same size.
+  --num_gpus NUM_GPUS   number of GPUs to execute the cryosieve program, 1 by default.
 ```
 
-The input of CryoSieve contains:
+The input of `cryosieve-core` contains:
 
 - Input star file.
+- Output star file. `cryosieve-core` will simultaneously produce a `_sieved.star` file at the same directory.
 - Directory of particle stacks.
 - Pixelsize.
-- Reconstructed volume(s). Multiple copies are accepted. The number of volumes should be equal to the number of classes (see `_rlnRandomSubset`) in star file.
+- Reconstructed volume(s). Multiple volumes are accepted. The number of volumes should be equal to the number of classes (see `_rlnRandomSubset`) in star file.
 - (Optional) Mask file.
 - The ratio of sieved particles.
-- (Optional) The highpass cut-off frequency for calculating CryoSieve score, 40$\AA$ by default.
-- Output star file. CryoSieve will simultaneously produce a `_sieved.star` file at the same directory.
+- (Optional) The highpass cut-off frequency for calculating CryoSieve score.
+- (Optional) If `--balance` is given, CryoSieve will make retained particles in different subsets in same size.
+- The number of GPUs to be used.
 
-## Run CryoSieve with multiple GPUs on single machine
+## Run CryoSieve core with multiple GPUs on single machine
 
-We use the [elastic launch](https://pytorch.org/docs/1.10/elastic/run.html?highlight=torchrun) provided by PyTorch. For example, you can launch CryoSieve in a cluster node with 4 GPUs with the following command:
-
+When `--num_gpus` is given and larger than 1. The CryoSieve core program will utilize multiple GPUs to accelerate the sieving process. In this case, it uses the [elastic launch](https://pytorch.org/docs/1.10/elastic/run.html?highlight=torchrun) provided by PyTorch to launch multiple processes. Each process will occupy exactly one GPU. As an example, in a machine with 4 GPUs, we can use the following command to run the toy example.
 ```
-torchrun --standalone --nnodes=1 --nproc_per_node=4 -m CryoSieve -i "CNG.star" -d "./" -p 1.32 -v "CNG_A.mrc" -v "CNG_B.mrc" -m "CNG_mask.mrc" -r 0.2 -f 40 -o "my_CNG_1.star"
+cryosieve-core --i CNG.star --o my_CNG_1.star --angpix 1.32 --volume CNG_A.mrc --volume CNG_B.mrc --mask CNG_mask.mrc --retention-ratio 0.8 --frequency 40 --num_gpus 4
 ```
-
-Here the option `--nproc_per_node=4` means 4 processes will be launched and run simultaneously. Each process will utilize one GPU according to its local rank.
 
 ## Process real world dataset
 
@@ -96,82 +103,59 @@ We will use the final stack of [EMPIAR-11233](https://www.ebi.ac.uk/empiar/EMPIA
 ```
 wget -nH -m ftp.ebi.ac.uk/empiar/world_availability/11233/data/Final_Particle_Stack/
 ```
-After downloading you would have a folder `XXX/data/Final_Particle_Stack`. The folder contains a star file recording all information about particles and final stacks.
-
-Currently our program does not support STAR format after Relion 3.1 (see Relion's document on [Conventions](https://relion.readthedocs.io/en/release-4.0/Reference/Conventions.html)). Hence we convert this star file into Relion 2.0 version by [UCSF pyem](https://github.com/asarnow/pyem). Here we provide the converted [star file](URL).
-
-In addition, we need a mask file. You can use any cryo-EM software you like to do the 3D reconstruction and generate a mask according to the reconstructed volume. Here we also provide the [mask file](URL) we used in our experiments, and you can download it if you don't want to generate a mask by yourself.
+After downloading you would have a folder `XXX/data/Final_Particle_Stack`. This folder contains a star file recording all information about particles and a mrcs file which is the final stack. In addition, we need a mask file. You can use any cryo-EM software you like to do the 3D reconstruction and generate a mask according to the reconstructed volume. Here we also provide the [mask file](URL) we used in our experiments, and you can download it if you don't want to generate a mask by yourself. After obtaining the mask file, put it into this directory.
 
 ### Iteratively doing reconstruction and sieving
 
-The sieving process usually contains several rounds. In each iteration, we first use Relion to do 3D reconstruction (and postprocessing for obtaining the FSC curve and resolution), and then apply CryoSieve to sieve a fraction of particles. Here we show how to process one iteration.
+To get best result on real world dataset, the sieving process usually contains several rounds. In each iteration, we do 3D reconstruction (and maybe postprocessing to obtain the FSC curve and resolution), and then apply CryoSieve to sieve a fraction of particles according to the reconstructed map. The highpass cut-off frequency usually increase by round. Here we provide an automatic program `cryosieve` implementing all above steps in one command. Please follow the steps below:
 
-First make a working directory for the whole process:
+1. Change the working directory to `XXX/data/Final_Particle_Stack`:
 ```
-mkdir XXX/data/CryoSieve_output/
+cd XXX/data/Final_Particle_Stack
 ```
-Then copy the star file and mask file to the working directory for the following usage:
+1. Currently, our automatic program use Relion to do the 3D reconstruction and postprocessing. Please ensure that `relion_reconstruct` or `relion_reconstruct_mpi` and `relion_postprocess` are available. Then run the following command:
 ```
-cp THE_STAR_FILE XXX/data/CryoSieve_output/TRPM8_0.star
-cp THE_MASK_FILE XXX/data/CryoSieve_output/TRPM8_mask.mrc
+cryosieve --reconstruct_software relion_reconstruct --postprocess_software relion_postprocess --i diver2019_pmTRPM8_calcium_Krios_6Feb18_finalParticleStack_EMPIAR_composite.star --o output/ --mask mask.mrc --angpix 1.059 --num_iters 10 --frequency_start 40 --frequency_end 3 --retention_ratio 0.8 --sym C4
 ```
-Here the suffix `_0` means this star file is the result after 0 round of sieving.
+The whole process may take more than one hour, depending on your computer resources. Several result files will be written into the directory `output/`. For example, `_iter{n}.star` contains particles remained after n-th iteration of sieving, folder `_postprocess_iter{n}` contains the postprocessing result after n-th iteration.
 
-Next, use Relion to do 3D reconstruction. This step can be replaced by any other cryo-EM 3D reconstruction software you like:
-```
-cd XXX/data/Final_Particle_Stack/
-relion_reconstruct --i XXX/data/CryoSieve_output/TRPM8_0.star --o XXX/data/CryoSieve_output/TRPM8_0A.mrc --sym C4 --angpix 1.059 --ctf true --subset 1
-relion_reconstruct --i XXX/data/CryoSieve_output/TRPM8_0.star --o XXX/data/CryoSieve_output/TRPM8_0B.mrc --sym C4 --angpix 1.059 --ctf true --subset 2
-cd XXX/data/CryoSieve_output/
-```
-Here the suffix `_0A` and `_0B` means the reconstructed volumes of round 0 and hemi-sphere A and B, respectively.
+## Arguments of CryoSieve
 
-If you are like to see the FSC curve and resolution at this moment, you can also use Relion postprocess. But the results will not contribute anything to the next sieving step.
+The program `cryosieve` is an integreted program iteratively calling relion and `cryosieve-core` to do sieving process.
+
 ```
-relion_postprocess --i TRPM8_0A.mrc --i2 TRPM8_0B.mrc --angpix 1.059 --mask TRPM8_mask.mrc --auto_bfac true --o TRPM8_postprocess_0
+$ cryosieve -h
+usage: cryosieve [-h] --reconstruct_software RECONSTRUCT_SOFTWARE [--postprocess_software POSTPROCESS_SOFTWARE] --i I --o O --angpix ANGPIX [--sym SYM]
+                 [--num_iters NUM_ITERS] [--frequency_start FREQUENCY_START] [--frequency_end FREQUENCY_END] [--retention_ratio RETENTION_RATIO] --mask MASK
+                 [--balance] [--num_gpus NUM_GPUS]
+
+CryoSieve: a particle sorting and sieving software for single particle analysis in cryo-EM.
+
+options:
+  -h, --help            show this help message and exit
+  --reconstruct_software RECONSTRUCT_SOFTWARE
+                        command for reconstruction.
+  --postprocess_software POSTPROCESS_SOFTWARE
+                        command for postprocessing.
+  --i I                 input star file path.
+  --o O                 output path prefix.
+  --angpix ANGPIX       pixelsize in Angstrom.
+  --sym SYM             molecular symmetry, c1 by default.
+  --num_iters NUM_ITERS
+                        number of iterations for applying CryoSieve, 10 by default.
+  --frequency_start FREQUENCY_START
+                        starting threshold frquency, in Angstrom, 50A by default.
+  --frequency_end FREQUENCY_END
+                        ending threshold frquency, in Angstrom, 3A by default.
+  --retention_ratio RETENTION_RATIO
+                        fraction of retained particles in each iteration, 0.8 by default.
+  --mask MASK           mask file path.
+  --balance             make remaining particles in different subsets in same size.
+  --num_gpus NUM_GPUS   number of gpus to execute CryoSieve core program, 1 by default.
 ```
 
-Now we are ready to use CryoSieve for sieving the particle stack:
-```
-CryoSieve -i TRPM8_0.star -d XXX/data/Final_Particle_Stack/ -p 1.059 -v TRPM8_0A.mrc -v TRPM8_0B.mrc -m TRPM8_mask.mrc -r 0.2 -f 40 -o TRPM8_1.star
-```
-Here the parameter `-f 40` means the cut-off frequency of highpass operator in CryoSieve score are set to be 40 Angstrom.
+There are several useful remarks:
 
-If you run above command successfully and obtained `TRPM8_1.star` and `TRPM8_1_sieved.star`, congratulations! The first file should contains 80% high-scored particles of `TRPM8_0.star`.
-
-You can also continue this process and go for second iteration:
-```
-cd XXX/data/Final_Particle_Stack/
-relion_reconstruct --i XXX/data/CryoSieve_output/TRPM8_1.star --o XXX/data/CryoSieve_output/TRPM8_1A.mrc --sym C4 --angpix 1.059 --ctf true --subset 1
-relion_reconstruct --i XXX/data/CryoSieve_output/TRPM8_1.star --o XXX/data/CryoSieve_output/TRPM8_1B.mrc --sym C4 --angpix 1.059 --ctf true --subset 2
-cd XXX/data/CryoSieve_output/
-relion_postprocess --i TRPM8_1A.mrc --i2 TRPM8_1B.mrc --angpix 1.059 --mask TRPM8_mask.mrc --auto_bfac true --o TRPM8_postprocess_1
-CryoSieve -i TRPM8_1.star -d XXX/data/Final_Particle_Stack/ -p 1.059 -v TRPM8_1A.mrc -v TRPM8_1B.mrc -m TRPM8_mask.mrc -r 0.2 -f 16.875 -o TRPM8_2.star
-```
-In this iteration, the cut-off frequency is set to be 16.875 Angstrom. In our experiments, we usually set this frequency to be monotonously increasing, see our paper for details.
-
-Now you are encouraged to do more iterations by yourself. You may also determine parameters in each round according to you own dataset and expertise.
-
-### An automatic shell script
-
-The procedure above can be easily down atomatically by a shell script. Here we provide a demo:
-
-```[language=shell]
-protein=TRPM8
-data_dir="XXX/data/Final_Particle_Stack/"
-working_dir="XXX/data/CryoSieve_output/"
-symmetry="C4"
-pixel_size=1.059
-ratio=0.2
-frequency=(40 16.875 10.693 7.826 6.171 5.094 4.337 3.776 3.344 3)
-
-for i in {0..9}
-do
-    cd ${data_dir}
-    relion_reconstruct --i ${working_dir}${protein}_${i}.star --o ${working_dir}${protein}_${i}A.mrc --sym ${symmetry} --angpix ${pixel_size} --ctf true --subset 1
-    relion_reconstruct --i ${working_dir}${protein}_${i}.star --o ${working_dir}${protein}_${i}B.mrc --sym ${symmetry} --angpix ${pixel_size} --ctf true --subset 2
-    cd ${working_dir}
-    relion_postprocess --i ${protein}_${i}A.mrc --i2 ${protein}_${i}B.mrc --angpix ${pixel_size} --mask ${protein}_mask.mrc --auto_bfac true --o ${protein}_postprocess_${i}
-    CryoSieve -i ${protein}_${i}.star -d ${data_dir} -p ${pixel_size} -v ${protein}_${i}A.mrc -v ${protein}_${i}B.mrc -m ${protein}_mask.mrc -r ${ratio} -f ${frequency[$i]} -o ${protein}_$(($i+1)).star
-done
-```
+- CryoSieve will use RECONSTRUCT_SOFTWARE as the prefix of reconstruction command. It allows you to use `--reconstruct_software "mpirun -n 5 relion_reconstruct_mpi"` to accelerate reconstruction step by multi-processing.
+- If POSTPROCESS_SOFTWARE is not given, CryoSieve will skip the postprocessing step. Notice that postprocessing is not necessary for the sieving procedure.
+- Since `relion_reconstruct` use current directory as its default working directory, user should ensure that `relion_reconstruct` can correctly access the particles.

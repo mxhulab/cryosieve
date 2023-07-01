@@ -1,6 +1,6 @@
 import os
+import starfile
 import numpy as np
-from math import radians, cos, sin
 from copy import copy
 from torch.utils.data import Dataset
 from .utility import mrcread
@@ -14,95 +14,51 @@ class ParticleDataset(Dataset):
     be loaded until the __getitem__ method is called.
     '''
 
-    def __init__(self, star_path : str, data_dir : str, pixel_size : float):
+    def __init__(self, star_path : str, data_dir : str = '', pixel_size : float = 1.):
         if not os.path.exists(star_path):
             raise FileNotFoundError(f'{star_path} does not exist.')
-        self.star_path = star_path
+        star = starfile.read(star_path, always_dict = True)
+        self.data_dir = data_dir
+        self.pixel_size = pixel_size
 
-        # Read and parse the star file.
-        header_dict = {}
-        data_lines = []
-        f = open(star_path, 'r')
-        status = 0
-        for i, line in enumerate(f):
-            # New data block.
-            if status == 0 and line.startswith('data_'):
-                block_name = line.split()[0][5:]
-                if block_name not in ['', 'images']:
-                    raise ValueError(f'Invalid block in line {i + 1}.')
-                status = 1
+        # <Relion 3.1
+        if len(star) == 1 and (0 in star or 'images' in star):
+            self.version = 2
+            self.particles = star[0] if 0 in star else star['images']
 
-            # New loop.
-            elif status == 1 and line.startswith('loop_'):
-                status = 2
+            # Check keys.
+            for key in ['rlnOriginX', 'rlnOriginY', 'rlnAngleRot', 'rlnAngleTilt',
+                        'rlnAnglePsi', 'rlnVoltage', 'rlnDefocusU', 'rlnDefocusV',
+                        'rlnDefocusAngle', 'rlnSphericalAberration',
+                        'rlnAmplitudeContrast', 'rlnImageName']:
+                if key not in self.particles:
+                    raise ValueError(f'Key {key} missed in star file {star_path}.')
 
-            # Parse labels.
-            elif status == 2:
-                if line.startswith('_'):
-                    key = line.split()[0][1:]
-                    if key in header_dict:
-                        raise ValueError(f'Multiple key {key} occured.')
-                    header_dict[key] = len(header_dict)
-                else:
-                    status = 3
-                    self.start_line = i
+        # >=Relion 3.1
+        elif len(star) == 2 and ('optics' in star and 'particles' in star):
+            self.version = 3
+            self.optics = star['optics']
+            self.particles = star['particles']
 
-            # Parse data entry.
-            if status == 3:
-                if line.strip() == '':
-                    status = 0
-                    self.end_line = i
-                    break
-                else:
-                    data_lines.append(line)
-        if status == 3:
-            self.end_line = i + 1
-        elif status != 0:
-            raise ValueError('Invalid star file.')
-        f.close()
+            # Check keys.
+            for key in ['rlnVoltage', 'rlnImagePixelSize', 'rlnSphericalAberration',
+                        'rlnAmplitudeContrast', 'rlnOpticsGroup']:
+                if key not in self.optics:
+                    raise ValueError(f'Key {key} missed in block data_optics in star file {star_path}.')
 
-        # Check header.
-        for key in ['rlnOriginX', 'rlnOriginY', 'rlnAngleRot', 'rlnAngleTilt', 'rlnAnglePsi',
-                    'rlnVoltage', 'rlnDefocusU', 'rlnDefocusV', 'rlnDefocusAngle',
-                    'rlnSphericalAberration', 'rlnAmplitudeContrast', 'rlnImageName']:
-            if key not in header_dict:
-                raise ValueError(f'Key {key} missed in star file.')
+            for key in ['rlnOriginXAngst', 'rlnOriginYAngst', 'rlnAngleRot', 'rlnAngleTilt',
+                        'rlnAnglePsi', 'rlnDefocusU', 'rlnDefocusV', 'rlnDefocusAngle',
+                        'rlnOpticsGroup', 'rlnImageName']:
+                if key not in self.particles:
+                    raise ValueError(f'Key {key} missed in block data_particles in star file {star_path}.')
 
-        n = len(data_lines)
-        self.paras = np.empty((n, 14), dtype = np.float64)
-        self.image_ids = np.empty(n, dtype = np.int32)
-        self.stack_paths = []
-        self.subsets = np.ones(n, dtype = np.int32)
-        self.indices = np.arange(n, dtype = np.int32)
+        else:
+            raise ValueError('Invalid particle star file.')
 
-        for i, line in enumerate(data_lines):
-            info = line.split()
-
-            self.paras[i, 0] = float(info[header_dict['rlnOriginX']])                      # dx
-            self.paras[i, 1] = float(info[header_dict['rlnOriginY']])                      # dy
-
-            psi   = radians(float(info[header_dict['rlnAngleRot']]))
-            theta = radians(float(info[header_dict['rlnAngleTilt']]))
-            phi   = radians(float(info[header_dict['rlnAnglePsi']]))
-            self.paras[i, 2] =  cos((phi + psi) / 2) * cos(theta / 2)                       # qw
-            self.paras[i, 3] = -sin((phi - psi) / 2) * sin(theta / 2)                       # qx
-            self.paras[i, 4] = -cos((phi - psi) / 2) * sin(theta / 2)                       # qy
-            self.paras[i, 5] = -sin((phi + psi) / 2) * cos(theta / 2)                       # qz
-
-            self.paras[i, 6]  = float(info[header_dict['rlnVoltage']]) * 1000               # voltage
-            self.paras[i, 7]  = float(info[header_dict['rlnDefocusU']])                     # defocusU
-            self.paras[i, 8]  = float(info[header_dict['rlnDefocusV']])                     # defocusV
-            self.paras[i, 9]  = radians(float(info[header_dict['rlnDefocusAngle']]))        # theta
-            self.paras[i, 10] = float(info[header_dict['rlnSphericalAberration']]) * 1e7    # Cs
-            self.paras[i, 11] = float(info[header_dict['rlnAmplitudeContrast']])            # amplitudeContrast
-            self.paras[i, 12] = radians(float(info[header_dict['rlnPhaseShift']])) \
-                                if 'rlnPhaseShift' in header_dict else 0.                   # phaseShift
-            self.paras[i, 13] = pixel_size                                                  # pixelSize
-
-            slc, name, *_ = info[header_dict['rlnImageName']].split('@')
-            self.image_ids[i] = int(slc) - 1
-            self.stack_paths.append(data_dir + name)
-            if 'rlnRandomSubset' in header_dict: self.subsets[i] = int(info[header_dict['rlnRandomSubset']])
+        self.indices = np.arange(len(self.particles), dtype = np.int32)
+        self.subsets = self.particles['rlnRandomSubset'].to_numpy().astype(np.int32) \
+                        if 'rlnRandomSubset' in self.particles \
+                        else np.ones(len(self.particles), dtype = np.int32)
 
     def __len__(self) -> int:
         return len(self.indices)
@@ -110,23 +66,57 @@ class ParticleDataset(Dataset):
     def __getitem__(self, i : int):
         assert 0 <= i < len(self.indices)
         idx = self.indices[i]
-        return mrcread(self.stack_paths[idx], self.image_ids[idx]), self.paras[idx]
+
+        # Common parameters.
+        slc, name, *_ = self.particles.loc[idx, 'rlnImageName'].split('@')
+        psi         = np.radians(self.particles.loc[idx, 'rlnAngleRot'])
+        theta       = np.radians(self.particles.loc[idx, 'rlnAngleTilt'])
+        phi         = np.radians(self.particles.loc[idx, 'rlnAnglePsi'])
+        qw          =  np.cos((phi + psi) / 2) * np.cos(theta / 2)
+        qx          = -np.sin((phi - psi) / 2) * np.sin(theta / 2)
+        qy          = -np.cos((phi - psi) / 2) * np.sin(theta / 2)
+        qz          = -np.sin((phi + psi) / 2) * np.cos(theta / 2)
+        defocusU    = self.particles.loc[idx, 'rlnDefocusU']
+        defocusV    = self.particles.loc[idx, 'rlnDefocusV']
+        astigmatism = np.radians(self.particles.loc[idx, 'rlnDefocusAngle'])
+        phase_shift = np.radians(self.particles.loc[idx, 'rlnPhaseShift']) \
+                    if 'rlnPhaseShift' in self.particles else 0.
+
+        # Different versions.
+        if self.version == 2:
+            dx          = self.particles.loc[idx, 'rlnOriginX']
+            dy          = self.particles.loc[idx, 'rlnOriginY']
+            voltage     = self.particles.loc[idx, 'rlnVoltage'] * 1000
+            Cs          = self.particles.loc[idx, 'rlnSphericalAberration'] * 1e7
+            amplitude   = self.particles.loc[idx, 'rlnAmplitudeContrast']
+            pixel_size  = self.pixel_size
+        else:
+            group       = self.particles.loc[idx, 'rlnOpticsGroup']
+            row         = self.optics.query(f'rlnOpticsGroup == {group}')
+            if len(row) == 0:
+                raise ValueError(f'Optic group {group} does not exist.')
+            elif len(row) > 1:
+                raise ValueError(f'Find multiple optic group {group}.')
+            pixel_size  = row.loc[0, 'rlnImagePixelSize']
+            dx          = self.particles.loc[idx, 'rlnOriginXAngst'] / pixel_size
+            dy          = self.particles.loc[idx, 'rlnOriginYAngst'] / pixel_size
+            voltage     = row.loc[0, 'rlnVoltage'] * 1000
+            Cs          = row.loc[0, 'rlnSphericalAberration'] * 1e7
+            amplitude   = row.loc[0, 'rlnAmplitudeContrast']
+
+        return mrcread(self.data_dir + name, int(slc) - 1), \
+               np.array([dx, dy, qw, qx, qy, qz, voltage, defocusU, defocusV,
+                         astigmatism, Cs, amplitude, phase_shift, pixel_size], dtype = np.float64)
 
     def save(self, output_path : str):
-        fin  = open(self.star_path, 'r')
-        fout = open(output_path, 'w')
-
-        mask = np.zeros(len(self.paras), dtype = np.bool_)
-        mask[self.indices] = True
-        for i, line in enumerate(fin):
-            if not (self.start_line <= i < self.end_line and not mask[i - self.start_line]):
-                fout.write(line)
-
-        fin.close()
-        fout.close()
+        if self.version == 2:
+            starfile.write({'images' : self.particles.iloc[self.indices]}, output_path, overwrite = True)
+        else:
+            starfile.write({'optics' : self.optics, 'particles' : self.particles.iloc[self.indices]},
+                           output_path, overwrite = True)
 
     def reset(self, subset = None):
-        self.indices = np.arange(len(self.paras), dtype = np.int32) if subset is None else \
+        self.indices = np.arange(len(self.particles), dtype = np.int32) if subset is None else \
                        np.where(self.subsets == subset)[0]
 
     def subset(self, indices):

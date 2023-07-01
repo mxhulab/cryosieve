@@ -30,4 +30,4 @@ classifiers = [
 
 [project.scripts]
 "cryosieve" = "cryosieve.__main__:main"
-"cryosieve-core" = "cryosieve.core:main"
+"cryosieve-core" = "cryosieve.core:core"

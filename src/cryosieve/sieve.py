@@ -1,7 +1,3 @@
-__all__ = [
-    'sieve'
-]
-
 import cupy as cp
 import numpy as np
 import torch
@@ -29,7 +25,7 @@ def sieve(dataset, volume, threshold, number, rank, world_size):
         quats = paras[:, 2:6]
         ctfs  = paras[:, 6:14]
 
-        # Compute g-score.
+        # Compute score.
         imgs = translate(imgs, trans)
         projs = convolute_ctf(project(volume, quats), ctfs) - imgs
         imgs = highpass2d(imgs, threshold)
