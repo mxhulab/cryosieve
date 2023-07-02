@@ -1,0 +1,33 @@
+package:
+  name: cryosieve
+  version: 1.0
+
+source:
+  path: cryosieve-1.0
+
+build:
+  noarch: python
+  number: 0
+  script: python -m pip install . -vv
+
+requirements:
+  build:
+    - python
+    - pip
+  run:
+    - python >=3.7
+    - numpy >=1.18
+    - mrcfile >=1.2
+    - starfile >=0.4
+    - cupy >=10
+    - pytorch >=1.10
+
+test:
+  imports:
+    - cryosieve
+
+about:
+  home: https://github.com/mxhulab/cryosieve
+  license: GPL-3.0
+  license_file: LICENSE
+  summary: 'CryoSieve: a particle sorting and sieving algorithm for single particle analysis in cryo-EM'

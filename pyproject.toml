@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cryosieve"
+version = "1.0"
+authors = [
+    { name="Jianying Zhu", email="zhu-jy20@mails.tsinghua.edu.cn" },
+    { name="Qi Zhang", email="2252749718@qq.com" },
+    { name="Hui Zhang", email="zhanghui198@mails.ucas.ac.cn" },
+    { name="Zuoqiang Shi", email="zqshi@tsinghua.edu.cn" },
+    { name="Mingxu Hu", email="humingxu@mail.tsinghua.edu.cn" },
+    { name="Chenglong Bao", email="clbao@tsinghua.edu.cn" },
+]
+description = "CryoSieve: a particle sorting and sieving algorithm for single particle analysis in cryo-EM"
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.7"
+dependencies = [
+    "numpy>=1.18",
+    "mrcfile>=1.2",
+    "starfile>=0.4",
+    "cupy>=10",
+    "torch>=1.10"
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Environment :: GPU :: NVIDIA CUDA",
+    "Topic :: Scientific/Engineering :: Image Processing"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/mxhulab/cryosieve"
+
+[project.scripts]
+"cryosieve" = "cryosieve.__main__:main"
+"cryosieve-core" = "cryosieve.core:core"
