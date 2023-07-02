@@ -79,7 +79,7 @@ cd ~/toy/
 ```
 3. Initiate CryoSieve with the following command:
 ```
-cryosieve-core --i CNG.star --o my_CNG_1.star --angpix 1.32 --volume CNG_A.mrc --volume CNG_B.mrc --mask CNG_mask.mrc --retention-ratio 0.8 --frequency 40
+cryosieve-core --i CNG.star --o my_CNG_1.star --angpix 1.32 --volume CNG_A.mrc --volume CNG_B.mrc --mask CNG_mask.mrc --retention_ratio 0.8 --frequency 40
 ```
 You may find explanation for each argument of `cryosieve-core` [in the following section](#cryosieve-core).
 
@@ -87,7 +87,7 @@ When the `--num_gpus` parameter is used with a value larger than 1, CryoSieve's 
 
 For instance, on a machine equipped with 4 GPUs, you can use the following command to run the toy example:
 ```
-cryosieve-core --i CNG.star --o my_CNG_1.star --angpix 1.32 --volume CNG_A.mrc --volume CNG_B.mrc --mask CNG_mask.mrc --retention-ratio 0.8 --frequency 40 --num_gpus 4
+cryosieve-core --i CNG.star --o my_CNG_1.star --angpix 1.32 --volume CNG_A.mrc --volume CNG_B.mrc --mask CNG_mask.mrc --retention_ratio 0.8 --frequency 40 --num_gpus 4
 ```
 
 Upon successful execution, the command will generate two star files, `my_CNG_1.star` and `my_CNG_1_sieved.star`. These files contain the information of the remaining particles and the sieved particles, respectively. You can compare them with the provided `CNG_1.star` and `CNG_1_sieved.star` files. If executed correctly, they should contain the same particles.
