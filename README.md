@@ -53,7 +53,7 @@ pip install cryosieve
 Alternatively, to install CryoSieve using `conda`, execute the following command:
 
 ```
-conda install --channel conda-forge cryosieve
+conda install -c mxhulab cryosieve
 ```
 
 ## Verifying Installation
@@ -72,7 +72,7 @@ This should display the help information for CryoSieve, indicating a successful 
 
 To validate your successful installation of CryoSieve and familiarize yourself with its functionalities, we highly recommend trying CryoSieve on this [toy example](https://github.com/mxhulab/cryosieve-demos/tree/master/toy). Please follow the steps below:
 
-1. Download the dataset and unzip it into any directory of your choice, e.g., `~/toy/`.
+1. Download the dataset and place it into any directory of your choice, e.g., `~/toy/`.
 2. Navigate to this directory by executing the following command:
 ```
 cd ~/toy/
