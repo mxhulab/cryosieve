@@ -25,3 +25,9 @@ requirements:
 test:
   imports:
     - cryosieve
+
+about:
+  home: https://github.com/mxhulab/cryosieve
+  license: GNU GPLv3
+  license_file: LICENSE
+  summary: 'CryoSieve: a particle sorting and sieving algorithm for single particle analysis in cryo-EM'
