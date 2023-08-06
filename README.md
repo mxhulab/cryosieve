@@ -1,14 +1,26 @@
-# Overview
+# CryoSieve Overview
 
-CryoSieve is a particle sorting and sieving software for single particle analysis in cryo-EM.
+CryoSieve is an advanced software solution designed for particle sorting/seiving in single particle analysis (SPA) for Cryogenic Electron Microscopy (cryo-EM). Supported by extensive experimental results, CryoSieve has demonstrated superior performance and efficiency compared to other cryo-EM particle sorting algorithms.
 
-<!-- The paper can be referred as XXX. -->
+Its unique ability to eliminate unnecessary particles from final stacks significantly optimizes the data analysis process. The refined selection of particles that remain contribute to a notably higher resolution output in reconstructed density maps.
+
+For certain datasets, the precision of CryoSieve's particle subset selection is so refined that it approaches the theoretical limit, delivering unprecedented detail and accuracy.
+
+For more details, please refer to the paper ["Not final yet: a minority of final stacks yields superior amplitude in single-particle cryo-EM"](https://www.researchsquare.com/article/rs-2921474/v1). If you find that CryoSieve contributes to your work, we kindly request you to cite this paper.
 
 # Installation
 
-CryoSieve is an open source software developed in Python programming language and released as a Python package. The source code can be found [on GitHub](OUR_GITHUB_REPO).
+CryoSieve is an open-source software, developed using Python, and is available as a Python package. You can access our source code [on GitHub](https://github.com/mxhulab/cryosieve).
 
-We recommend using Python version >= 3.7 and NVIDIA CUDA library installed in user's environment. The package dependency includes the following:
+## Prerequisites
+
+- Python version 3.7 or later.
+- NVIDIA CUDA library installed in the user's environment.
+
+## Dependencies
+
+The CryoSieve package depends on the following libraries:
+
 ```
 numpy>=1.18
 mrcfile>=1.2
@@ -17,37 +29,111 @@ cupy>=10
 torch>=1.10
 ```
 
-To install CryoSieve using pip, run the following command:
+## Preparation of CUDA Environment
+
+We recommend you install CuPy and PyTorch initially, as their installation largely depends on your CUDA environment. Please note, your PyTorch package should be CUDA-capable.
+
+To streamline this process, we suggest preparing a conda environment with the following command:
+```
+conda create -n CRYOSIEVE_ENV python=3.10 cupy=10.2 cudatoolkit=10.2 pytorch=1.12.1=py3.10_cuda10.2_cudnn7.6.5_0 -c conda-forge -c pytorch
+```
+
+This command is specifically for a CUDA environment version 10.2. If your CUDA environment is higher than 10.2, adjust the command based on the suitable variants and versions recommended by the [CuPy](CUPY_WEBSITE) and [PyTorch](PYTORCH_WEBSITE) developers for your specific CUDA environment.
+
+## Installing CryoSieve
+
+After preparing CuPy and PyTorch according to your CUDA environment, you can proceed with the installation of CryoSieve. It can be installed either via `pip` or `conda`.
+
+To install CryoSieve using `pip`, execute the following command:
+
 ```
 pip install cryosieve
 ```
-Or using conda, run the following command:
+
+Alternatively, to install CryoSieve using `conda`, execute the following command:
+
 ```
-conda install --channel conda-forge cryosieve
+conda install -c mxhulab cryosieve
 ```
-We recommand installing CuPy and PyTorch first, since their installation highly depends on user's environment. The PyTorch package should be CUDA-capable.
+
+## Verifying Installation
+
+You can verify whether CryoSieve has been installed successfully by running the following command:
+
+```
+cryosieve -h
+```
+
+This should display the help information for CryoSieve, indicating a successful installation.
 
 # Tutorial
 
-## Quickstart: a toy example
+## Quickstart: A Toy Example
 
-To ensure you have correctly installed CryoSieve and understand how to utilize it, we highly recommand running CryoSieve on this [toy example](URL). Please follow the steps below:
+To validate your successful installation of CryoSieve and familiarize yourself with its functionalities, we highly recommend trying CryoSieve on this [toy example](https://github.com/mxhulab/cryosieve-demos/tree/master/toy). Please follow the steps below:
 
-1. Download the dataset and unzip it to any directory, e.g., `~/toy/`.
-2. Change the working directory to this directory:
+1. Download the dataset and place it into any directory of your choice, e.g., `~/toy/`.
+2. Navigate to this directory by executing the following command:
 ```
 cd ~/toy/
 ```
-3. Run the following command:
+3. Initiate CryoSieve with the following command:
 ```
-cryosieve-core --i CNG.star --o my_CNG_1.star --angpix 1.32 --volume CNG_A.mrc --volume CNG_B.mrc --mask CNG_mask.mrc --retention-ratio 0.8 --frequency 40
+cryosieve-core --i CNG.star --o my_CNG_1.star --angpix 1.32 --volume CNG_A.mrc --volume CNG_B.mrc --mask CNG_mask.mrc --retention_ratio 0.8 --frequency 40
+```
+You may find explanation for each argument of `cryosieve-core` [in the following section](#cryosieve-core).
+
+When the `--num_gpus` parameter is used with a value larger than 1, CryoSieve's core program will leverage multiple GPUs to expedite the sieving process. It accomplishes this by using PyTorch's [elastic launch](https://pytorch.org/docs/1.10/elastic/run.html?highlight=torchrun) feature to initiate multiple processes. Each of these processes will use exactly one GPU.
+
+For instance, on a machine equipped with 4 GPUs, you can use the following command to run the toy example:
+```
+cryosieve-core --i CNG.star --o my_CNG_1.star --angpix 1.32 --volume CNG_A.mrc --volume CNG_B.mrc --mask CNG_mask.mrc --retention_ratio 0.8 --frequency 40 --num_gpus 4
 ```
 
-If you run it correctly, it should produce two star files named `my_CNG_1.star` and `my_CNG_1_sieved.star`, containing information of remained particles and sieved particles, respectively. You may compare them with given `CNG_1.star` and `CNG_1_sieved.star`, and they are expected to contain same particles.
+Upon successful execution, the command will generate two star files, `my_CNG_1.star` and `my_CNG_1_sieved.star`. These files contain the information of the remaining particles and the sieved particles, respectively. You can compare them with the provided `CNG_1.star` and `CNG_1_sieved.star` files. If executed correctly, they should contain the same particles.
 
-## Arguments of CryoSieve core
+## Processing Real-World Dataset
 
-The program `cryosieve-core` is the core particle sieving process.
+In this section, we provide a hands-on example of how to utilize CryoSieve for processing the final stack in a real-world experimental dataset.
+
+### Download the Dataset
+
+For this tutorial, we'll be using the final particle stack from the [EMPIAR-11233](https://www.ebi.ac.uk/empiar/EMPIAR-11233/) dataset. This dataset includes a final particle stack of TRPM8 bound to calcium, collected on a 300 kV FEI Titan Krios microscope.
+
+To download the final particle stack, navigate to your desired working directory and execute the following command:
+
+```
+wget -nH -m ftp.ebi.ac.uk/empiar/world_availability/11233/data/Final_Particle_Stack/
+```
+
+Upon completion, you'll find a new directory named `XXX/data/Final_Particle_Stack` in your working directory. This directory contains a star file with all particle information and an mrcs file representing the final stack.
+
+Additionally, you'll need a mask file. You can generate a mask file using any cryo-EM software, based on the reconstructed volume. If you prefer not to generate a mask file, we've provided one used in our experiments which you can download from this [link](https://github.com/mxhulab/cryosieve-demos/tree/master/EMPIAR-11233). Once you have the mask file, move it into the `Final_Particle_Stack` directory.
+
+### Iterative Reconstruction and Sieving
+
+To achieve optimal results with real-world datasets, the sieving process generally involves several iterations. In each iteration, we perform 3D reconstruction (and perhaps postprocessing to derive the Fourier Shell Correlation (FSC) curve and resolution). We then apply CryoSieve to sieve a fraction of the particles based on the reconstructed map. The highpass cut-off frequency typically increases with each round.
+
+For your convenience, we've developed an automatic command `cryosieve` which performs all these steps in a single run. To use it, please follow these steps:
+
+1. Change the working directory to `XXX/data/Final_Particle_Stack`:
+```
+cd XXX/data/Final_Particle_Stack
+```
+2. Our automatic program currently uses Relion for 3D reconstruction and postprocessing. Therefore, make sure that `relion_reconstruct` or `relion_reconstruct_mpi` and `relion_postprocess` are accessible. Once confirmed, run the following command:
+```
+cryosieve --reconstruct_software relion_reconstruct --postprocess_software relion_postprocess --i diver2019_pmTRPM8_calcium_Krios_6Feb18_finalParticleStack_EMPIAR_composite.star --o output/ --mask mask.mrc --angpix 1.059 --num_iters 10 --frequency_start 40 --frequency_end 3 --retention_ratio 0.8 --sym C4
+```
+For a detailed explanation of each `cryosieve` argument, please refer to the following section [Cryosieve Parameters](#cryosieve).
+
+The entire process may take over an hour, depending on your system resources. Multiple result files will be generated and saved in the `output/` directory. For instance, the `_iter{n}.star` file contains particles that remain after the n-th sieving iteration, and the `_postprocess_iter{n}` folder houses the postprocessing result after the n-th iteration.
+
+# Arguments of `cryosive-core` and `cryosieve`
+
+<a name="cryosieve-core"></a>
+## Arguments of `cryosieve-core`
+
+The program `cryosieve-core` is the core particle sieving module.
 
 ```
 $ cryosieve-core -h
@@ -73,53 +159,8 @@ options:
   --num_gpus NUM_GPUS   number of GPUs to execute the cryosieve program, 1 by default.
 ```
 
-The input of `cryosieve-core` contains:
-
-- Input star file.
-- Output star file. `cryosieve-core` will simultaneously produce a `_sieved.star` file at the same directory.
-- Directory of particle stacks.
-- Pixelsize.
-- Reconstructed volume(s). Multiple volumes are accepted. The number of volumes should be equal to the number of classes (see `_rlnRandomSubset`) in star file.
-- (Optional) Mask file.
-- The ratio of sieved particles.
-- (Optional) The highpass cut-off frequency for calculating CryoSieve score.
-- (Optional) If `--balance` is given, CryoSieve will make retained particles in different subsets in same size.
-- The number of GPUs to be used.
-
-## Run CryoSieve core with multiple GPUs on single machine
-
-When `--num_gpus` is given and larger than 1. The CryoSieve core program will utilize multiple GPUs to accelerate the sieving process. In this case, it uses the [elastic launch](https://pytorch.org/docs/1.10/elastic/run.html?highlight=torchrun) provided by PyTorch to launch multiple processes. Each process will occupy exactly one GPU. As an example, in a machine with 4 GPUs, we can use the following command to run the toy example.
-```
-cryosieve-core --i CNG.star --o my_CNG_1.star --angpix 1.32 --volume CNG_A.mrc --volume CNG_B.mrc --mask CNG_mask.mrc --retention-ratio 0.8 --frequency 40 --num_gpus 4
-```
-
-## Process real world dataset
-
-Here we provide an example of using CryoSieve to process final stack in an experimental dataset.
-
-### Download the dataset
-
-We will use the final stack of [EMPIAR-11233](https://www.ebi.ac.uk/empiar/EMPIAR-11233/) in this tutorial. This dataset includes a final particle stack of TRPM8 bound to calcium collected on a 300 kV FEI Titan Krios microscope. Change your working directory to any directory you like and use the following command to download the final particle stack:
-```
-wget -nH -m ftp.ebi.ac.uk/empiar/world_availability/11233/data/Final_Particle_Stack/
-```
-After downloading you would have a folder `XXX/data/Final_Particle_Stack`. This folder contains a star file recording all information about particles and a mrcs file which is the final stack. In addition, we need a mask file. You can use any cryo-EM software you like to do the 3D reconstruction and generate a mask according to the reconstructed volume. Here we also provide the [mask file](URL) we used in our experiments, and you can download it if you don't want to generate a mask by yourself. After obtaining the mask file, put it into this directory.
-
-### Iteratively doing reconstruction and sieving
-
-To get best result on real world dataset, the sieving process usually contains several rounds. In each iteration, we do 3D reconstruction (and maybe postprocessing to obtain the FSC curve and resolution), and then apply CryoSieve to sieve a fraction of particles according to the reconstructed map. The highpass cut-off frequency usually increase by round. Here we provide an automatic program `cryosieve` implementing all above steps in one command. Please follow the steps below:
-
-1. Change the working directory to `XXX/data/Final_Particle_Stack`:
-```
-cd XXX/data/Final_Particle_Stack
-```
-1. Currently, our automatic program use Relion to do the 3D reconstruction and postprocessing. Please ensure that `relion_reconstruct` or `relion_reconstruct_mpi` and `relion_postprocess` are available. Then run the following command:
-```
-cryosieve --reconstruct_software relion_reconstruct --postprocess_software relion_postprocess --i diver2019_pmTRPM8_calcium_Krios_6Feb18_finalParticleStack_EMPIAR_composite.star --o output/ --mask mask.mrc --angpix 1.059 --num_iters 10 --frequency_start 40 --frequency_end 3 --retention_ratio 0.8 --sym C4
-```
-The whole process may take more than one hour, depending on your computer resources. Several result files will be written into the directory `output/`. For example, `_iter{n}.star` contains particles remained after n-th iteration of sieving, folder `_postprocess_iter{n}` contains the postprocessing result after n-th iteration.
-
-## Arguments of CryoSieve
+<a name="cryosieve"></a>
+## Arguments of `cryosieve`
 
 The program `cryosieve` is an integreted program iteratively calling relion and `cryosieve-core` to do sieving process.
 
