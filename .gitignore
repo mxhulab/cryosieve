@@ -6,3 +6,6 @@ __pycache__/
 next.md
 .arcconfig
 .DS_Store
+.texpadtmp/
+README.pdf
+README.tex
