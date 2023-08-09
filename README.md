@@ -103,7 +103,7 @@ For this tutorial, we'll be using the final particle stack from the [EMPIAR-1123
 To download the final particle stack, navigate to your desired working directory and execute the following command:
 
 ```
-wget -nH -m ftp.ebi.ac.uk/empiar/world_availability/11233/data/Final_Particle_Stack/
+wget -nH -m ftp://ftp.ebi.ac.uk/empiar/world_availability/11233/data/Final_Particle_Stack/
 ```
 
 Upon completion, you'll find a new directory named `XXX/data/Final_Particle_Stack` in your working directory. This directory contains a star file with all particle information and an mrcs file representing the final stack.
