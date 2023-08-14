@@ -38,7 +38,7 @@ To streamline this process, we suggest preparing a conda environment with the fo
 conda create -n CRYOSIEVE_ENV python=3.10 cupy=10.2 cudatoolkit=10.2 pytorch=1.12.1=py3.10_cuda10.2_cudnn7.6.5_0 -c conda-forge -c pytorch
 ```
 
-This command is specifically for a CUDA environment version 10.2. If your CUDA environment is higher than 10.2, adjust the command based on the suitable variants and versions recommended by the [CuPy](CUPY_WEBSITE) and [PyTorch](PYTORCH_WEBSITE) developers for your specific CUDA environment.
+This command is specifically for a CUDA environment version 10.2. If your CUDA environment is higher than 10.2, adjust the command based on the suitable variants and versions recommended by the [CuPy](https://cupy.dev) and [PyTorch](https://pytorch.org) developers for your specific CUDA environment.
 
 ## Installing CryoSieve
 
