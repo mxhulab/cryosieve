@@ -1,4 +1,4 @@
-# CryoSieve Overview
+ # CryoSieve Overview
 
 CryoSieve is an advanced software solution designed for particle sorting/seiving in single particle analysis (SPA) for Cryogenic Electron Microscopy (cryo-EM). Supported by extensive experimental results, CryoSieve has demonstrated superior performance and efficiency compared to other cryo-EM particle sorting algorithms.
 
@@ -199,6 +199,6 @@ options:
 
 There are several useful remarks:
 
-- CryoSieve will use RECONSTRUCT_SOFTWARE as the prefix of reconstruction command. It allows you to use `--reconstruct_software "mpirun -n 5 relion_reconstruct_mpi"` to accelerate reconstruction step by multi-processing.
+- CryoSieve utilizes the `RECONSTRUCT_SOFTWARE` in its reconstruction command. This enables you to enhance the speed of the reconstruction step through multiprocessing by using the option `--reconstruct_software "mpirun -n 5 relion_reconstruct_mpi"`. Additionally, you can further boost the reconstruction speed by using the option `mpirun -n 5 relion_reconstruct_mpi --j 20`, leveraging multi-threading.
 - If POSTPROCESS_SOFTWARE is not given, CryoSieve will skip the postprocessing step. Notice that postprocessing is not necessary for the sieving procedure.
 - Since `relion_reconstruct` use current directory as its default working directory, user should ensure that `relion_reconstruct` can correctly access the particles.
