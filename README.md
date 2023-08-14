@@ -1,4 +1,4 @@
- # CryoSieve Overview
+# CryoSieve Overview
 
 CryoSieve is an advanced software solution designed for particle sorting/seiving in single particle analysis (SPA) for Cryogenic Electron Microscopy (cryo-EM). Supported by extensive experimental results, CryoSieve has demonstrated superior performance and efficiency compared to other cryo-EM particle sorting algorithms.
 
@@ -81,7 +81,7 @@ cd ~/toy/
 ```
 cryosieve-core --i CNG.star --o my_CNG_1.star --angpix 1.32 --volume CNG_A.mrc --volume CNG_B.mrc --mask CNG_mask.mrc --retention_ratio 0.8 --frequency 40
 ```
-You may find explanation for each argument of `cryosieve-core` [in the following section](#cryosieve-core).
+You may find explanation for each option of `cryosieve-core` [in the following section](#cryosieve-core).
 
 When the `--num_gpus` parameter is used with a value larger than 1, CryoSieve's core program will leverage multiple GPUs to expedite the sieving process. It accomplishes this by using PyTorch's [elastic launch](https://pytorch.org/docs/1.10/elastic/run.html?highlight=torchrun) feature to initiate multiple processes. Each of these processes will use exactly one GPU.
 
@@ -126,14 +126,14 @@ cd XXX/data/Final_Particle_Stack
 ```
 cryosieve --reconstruct_software relion_reconstruct --postprocess_software relion_postprocess --i diver2019_pmTRPM8_calcium_Krios_6Feb18_finalParticleStack_EMPIAR_composite.star --o output/ --mask mask.mrc --angpix 1.059 --num_iters 10 --frequency_start 40 --frequency_end 3 --retention_ratio 0.8 --sym C4
 ```
-For a detailed explanation of each `cryosieve` argument, please refer to the following section [Cryosieve Parameters](#cryosieve).
+For a detailed explanation of each `cryosieve` option, please refer to the following section [Cryosieve Parameters](#cryosieve).
 
 The entire process may take over an hour, depending on your system resources. Multiple result files will be generated and saved in the `output/` directory. For instance, the `_iter{n}.star` file contains particles that remain after the n-th sieving iteration, and the `_postprocess_iter{n}` folder houses the postprocessing result after the n-th iteration.
 
-# Arguments of `cryosive-core` and `cryosieve`
+# Options/Flags of `cryosive-core` and `cryosieve`
 
 <a name="cryosieve-core"></a>
-## Arguments of `cryosieve-core`
+## Options/Flags of `cryosieve-core`
 
 The program `cryosieve-core` is the core particle sieving module.
 
@@ -162,7 +162,7 @@ options:
 ```
 
 <a name="cryosieve"></a>
-## Arguments of `cryosieve`
+## Options/Flags of `cryosieve`
 
 The program `cryosieve` is an integreted program iteratively calling relion and `cryosieve-core` to do sieving process.
 
