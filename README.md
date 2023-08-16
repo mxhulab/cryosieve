@@ -42,7 +42,15 @@ This command is specifically for a CUDA environment version 10.2. If your CUDA e
 
 ## Installing CryoSieve
 
-After preparing CuPy and PyTorch according to your CUDA environment, you can proceed with the installation of CryoSieve. It can be installed either via `pip` or `conda`.
+After preparing CuPy and PyTorch according to your CUDA environment, it is crucial to activate it before proceeding with the CryoSieve installation. 
+
+We recommend using the following command to activate it directly. (replace CRYOSIEVE_ENV with the name of your custom environment).
+
+```
+conda activate CRYOSIEVE_ENV
+```
+
+Then, we turn to the step of install the CryoSieve. CryoSieve can be installed either via `pip` or `conda`.
 
 To install CryoSieve using `pip`, execute the following command:
 
