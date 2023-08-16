@@ -50,7 +50,7 @@ We recommend using the following command to activate it directly. (replace CRYOS
 conda activate CRYOSIEVE_ENV
 ```
 
-Then, we turn to the step of install the CryoSieve. CryoSieve can be installed either via `pip` or `conda`.
+Then, we turn to the step of installing CryoSieve. CryoSieve can be installed either via `pip` or `conda`.
 
 To install CryoSieve using `pip`, execute the following command:
 
