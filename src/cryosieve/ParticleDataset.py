@@ -97,12 +97,13 @@ class ParticleDataset(Dataset):
                 raise ValueError(f'Optic group {group} does not exist.')
             elif len(row) > 1:
                 raise ValueError(f'Find multiple optic group {group}.')
-            pixel_size  = row.loc[0, 'rlnImagePixelSize']
+            row         = row.iloc[0]
+            pixel_size  = row['rlnImagePixelSize']
             dx          = self.particles.loc[idx, 'rlnOriginXAngst'] / pixel_size
             dy          = self.particles.loc[idx, 'rlnOriginYAngst'] / pixel_size
-            voltage     = row.loc[0, 'rlnVoltage'] * 1000
-            Cs          = row.loc[0, 'rlnSphericalAberration'] * 1e7
-            amplitude   = row.loc[0, 'rlnAmplitudeContrast']
+            voltage     = row['rlnVoltage'] * 1000
+            Cs          = row['rlnSphericalAberration'] * 1e7
+            amplitude   = row['rlnAmplitudeContrast']
 
         return mrcread(self.data_dir + name, int(slc) - 1), \
                np.array([dx, dy, qw, qx, qy, qz, voltage, defocusU, defocusV,
