@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cryosieve"
-version = "1.3"
+version = "1.2.1"
 authors = [
     { name="Jianying Zhu", email="zhu-jy20@mails.tsinghua.edu.cn" },
     { name="Qi Zhang", email="2252749718@qq.com" },
