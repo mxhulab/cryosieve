@@ -6,6 +6,12 @@ Its unique ability to eliminate unnecessary particles from final stacks signific
 
 For certain datasets, the precision of CryoSieve's particle subset selection is so refined that it approaches the theoretical limit, delivering unprecedented detail and accuracy.
 
+## Video Tutorial
+
+A video tutorial is available within this repository. You can directly download it [here](cryosieve_video_tutorial.mp4).
+
+## Publications
+
 For more details, please refer to the paper ["Not final yet: a minority of final stacks yields superior amplitude in single-particle cryo-EM"](https://www.researchsquare.com/article/rs-2921474/v1). If you find that CryoSieve contributes to your work, we kindly request you to cite this paper.
 
 # Installation
