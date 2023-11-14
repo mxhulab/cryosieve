@@ -16,6 +16,19 @@ A video tutorial is available within this repository. You can directly download 
 
 For more details, please refer to the paper ["Not final yet: a minority of final stacks yields superior amplitude in single-particle cryo-EM"](https://www.researchsquare.com/article/rs-2921474/v1). If you find that CryoSieve contributes to your work, we kindly request you to cite this paper.
 
+## The List of Available Demo Cases
+
+| dataset | number of particles | molecular weight (kDa) | EMPIAR link | expected result |
+| ------- | ------------------- | --------------------- | ----------- | --------------- |
+| TRPA1 | 43,585 | 688 | [Link](#) | Result |
+| hemagglutinin | 130,000 | 150 | [Link](#) | Result |
+| LAT1 | 250,712 | 172 | [Link](#) | Result |
+| pfCRT | 16,905 | 102 | [Link](#) | Result |
+| TSHR-Gs | 41,054 | 125 | [Link](#) | Result |
+| TRPM8 | 42,040 | 513 | [Link](#) | Result |
+| apoferritin | 382,391 | 440 | [Link](#) | Result |
+| streptavidin | 23,991 | 52 | [Link](#) | Result |
+
 # Installation
 
 CryoSieve is an open-source software, developed using Python, and is available as a Python package. You can access our source code [on GitHub](https://github.com/mxhulab/cryosieve).
