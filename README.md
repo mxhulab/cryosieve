@@ -21,11 +21,11 @@ For more details, please refer to the paper ["Not final yet: a minority of final
 | dataset | number of particles | molecular weight (kDa) | EMPIAR link | expected result link |
 | ------- | ------------------- | --------------------- | ----------- | --------------- |
 | TRPA1 | 43,585 | 688 | [EMPIAR-10024](https://www.ebi.ac.uk/empiar/EMPIAR-10024/) | Result |
-| hemagglutinin | 130,000 | 150 | [EMPIAR-10097](https://www.ebi.ac.uk/empiar/EMPIAR-10097/） | Result |
+| hemagglutinin | 130,000 | 150 | [EMPIAR-10097](https://www.ebi.ac.uk/empiar/EMPIAR-10097/) | Result |
 | LAT1 | 250,712 | 172 | [EMPIAR-10264](https://www.ebi.ac.uk/empiar/EMPIAR-10264/) | Result |
 | pfCRT | 16,905 | 102 | [EMPIAR-10330](https://www.ebi.ac.uk/empiar/EMPIAR-10330/) | Result |
 | TSHR-Gs | 41,054 | 125 | [EMPIAR-11120](https://www.ebi.ac.uk/empiar/EMPIAR-11120/) | Result |
-| TRPM8 | 42,040 | 513 | [EMPIAR-11120](https://www.ebi.ac.uk/empiar/EMPIAR-11120/) | Result |
+| TRPM8 | 42,040 | 513 | [EMPIAR-11233](https://www.ebi.ac.uk/empiar/EMPIAR-11233/) | Result |
 | apoferritin | 382,391 | 440 | [EMPIAR-10200](https://www.ebi.ac.uk/empiar/EMPIAR-10200/) | Result |
 | streptavidin | 23,991 | 52 | [EMPIAR-10269](https://www.ebi.ac.uk/empiar/EMPIAR-10269/)  | Result |
 
