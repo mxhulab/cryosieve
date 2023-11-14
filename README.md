@@ -1,3 +1,5 @@
+![featured image](featured_image.jpg)
+
 # CryoSieve Overview
 
 CryoSieve is an advanced software solution designed for particle sorting/seiving in single particle analysis (SPA) for Cryogenic Electron Microscopy (cryo-EM). Supported by extensive experimental results, CryoSieve has demonstrated superior performance and efficiency compared to other cryo-EM particle sorting algorithms.
