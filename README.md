@@ -16,6 +16,19 @@ A video tutorial is available within this repository. You can directly download 
 
 For more details, please refer to the paper ["Not final yet: a minority of final stacks yields superior amplitude in single-particle cryo-EM"](https://www.researchsquare.com/article/rs-2921474/v1). If you find that CryoSieve contributes to your work, we kindly request you to cite this paper.
 
+## The List of Available Demo Cases
+
+| dataset | number of particles | molecular weight (kDa) | EMPIAR link | expected result link |
+| ------- | ------------------- | --------------------- | ----------- | --------------- |
+| TRPA1 | 43,585 | 688 | [EMPIAR-10024](https://www.ebi.ac.uk/empiar/EMPIAR-10024/) | [link](https://github.com/mxhulab/cryosieve-demos/tree/master/EMPIAR-10024) |
+| hemagglutinin | 130,000 | 150 | [EMPIAR-10097](https://www.ebi.ac.uk/empiar/EMPIAR-10097/) | [link](https://github.com/mxhulab/cryosieve-demos/tree/master/EMPIAR-10097) |
+| LAT1 | 250,712 | 172 | [EMPIAR-10264](https://www.ebi.ac.uk/empiar/EMPIAR-10264/) | [link](https://github.com/mxhulab/cryosieve-demos/tree/master/EMPIAR-10264) |
+| pfCRT | 16,905 | 102 | [EMPIAR-10330](https://www.ebi.ac.uk/empiar/EMPIAR-10330/) | [link](https://github.com/mxhulab/cryosieve-demos/tree/master/EMPIAR-10330) |
+| TSHR-Gs | 41,054 | 125 | [EMPIAR-11120](https://www.ebi.ac.uk/empiar/EMPIAR-11120/) | [link](https://github.com/mxhulab/cryosieve-demos/tree/master/EMPIAR-11120) |
+| TRPM8 | 42,040 | 513 | [EMPIAR-11233](https://www.ebi.ac.uk/empiar/EMPIAR-11233/) | [link](https://github.com/mxhulab/cryosieve-demos/tree/master/EMPIAR-11233) |
+| apoferritin | 382,391 | 440 | [EMPIAR-10200](https://www.ebi.ac.uk/empiar/EMPIAR-10200/) | [link](https://github.com/mxhulab/cryosieve-demos/tree/master/EMPIAR-10200) |
+| streptavidin | 23,991 | 52 | [EMPIAR-10269](https://www.ebi.ac.uk/empiar/EMPIAR-10269/)  | [link](https://github.com/mxhulab/cryosieve-demos/tree/master/EMPIAR-10269) |
+
 # Installation
 
 CryoSieve is an open-source software, developed using Python, and is available as a Python package. You can access our source code [on GitHub](https://github.com/mxhulab/cryosieve).
