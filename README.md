@@ -158,7 +158,7 @@ cd XXX/data/Final_Particle_Stack
 cryosieve --reconstruct_software relion_reconstruct --postprocess_software relion_postprocess --i diver2019_pmTRPM8_calcium_Krios_6Feb18_finalParticleStack_EMPIAR_composite.star --o output/ --mask mask.mrc --angpix 1.059 --num_iters 10 --frequency_start 40 --frequency_end 3 --retention_ratio 0.8 --sym C4
 ```
 
-For a detailed explanation of each `cryosieve` option, please refer to the following section [Cryosieve Parameters](#cryosieve).
+For a detailed explanation of each `cryosieve` option, please refer to the following section [Options/Arguments of `cryosieve`](#cryosieve).
 
 The entire process may take over an hour, depending on your system resources. Multiple result files will be generated and saved in the `output/` directory. For instance, the `_iter{n}.star` file contains particles that remain after the n-th sieving iteration, and the `_postprocess_iter{n}` folder houses the postprocessing result after the n-th iteration.
 
@@ -168,12 +168,12 @@ The objective of re-estimating poses using CryoSPARC is to prevent the unintenti
 
 For manually re-estimating poses with CryoSPARC, particles must be imported using CryoSPARC’s `import particle stack` job. This importation is from the `_iter{n}.star` file, which contains particles remaining after the n-th sieving iteration. Subsequently, the process involves conducting sequential `ab-initio` jobs, followed by either `homogeneous refinement` or `non-uniform refinement` jobs.
 
-Alternatively, users can utilize the cryosieve_auto_cryosparc.py script, available in this repository, to circumvent the labor-intensive manual operations in CryoSPARC.
+Alternatively, users can utilize the `cryosieve_auto_cryosparc.py` script, available in this repository, to circumvent the labor-intensive manual operations in CryoSPARC. The prerequisite for executing the `cryosieve_auto_cryosparc.py` script is the loading of CryoSPARC’s environment variables. This can be accomplished by executing the command `eval $(cryosparcm env)` in the shell. The successful loading of this environment can be verified by using the `which python` command. Upon successful execution, this command should point to a Python interpreter located within CryoSPARC’s installation path. Utilizing this Python interpreter, users can execute the `cryosieve_auto_cryosparc.py` script to automatically and sequentially carry out `import particle stack`, `ab-initio`, `homogenous refinement`, and `non-uniform refinement` jobs. These operations are performed for each particle stack listed in a sheet, which is provided as an argument to the `cryosieve_auto_cryosparc.py` script. For a detailed explanation of each `cryosieve_auto_cryosparc.py` option, please refer to the following section [Options/Arguments of `cryosieve_auto_cryosparc.py`](#cryosieve_auto_cryosparc).
 
-# Options/Flags of `cryosive-core` and `cryosieve`
+# Options/Arguments of `cryosive-core` and `cryosieve`
 
 <a name="cryosieve-core"></a>
-## Options/Flags of `cryosieve-core`
+## Options/Arguments of `cryosieve-core`
 
 The program `cryosieve-core` is the core particle sieving module.
 
@@ -202,7 +202,7 @@ options:
 ```
 
 <a name="cryosieve"></a>
-## Options/Flags of `cryosieve`
+## Options/Arguments of `cryosieve`
 
 The program `cryosieve` is an integreted program iteratively calling relion and `cryosieve-core` to do sieving process.
 
@@ -242,3 +242,6 @@ There are several useful remarks:
 - CryoSieve utilizes the `RECONSTRUCT_SOFTWARE` in its reconstruction command. This enables you to enhance the speed of the reconstruction step through multiprocessing by using the option `--reconstruct_software "mpirun -n 5 relion_reconstruct_mpi"`. Additionally, you can further boost the reconstruction speed by using the option `--reconstruct_software "mpirun -n 5 relion_reconstruct_mpi --j 20"`, leveraging multi-threading.
 - If POSTPROCESS_SOFTWARE is not given, CryoSieve will skip the postprocessing step. Notice that postprocessing is not necessary for the sieving procedure.
 - Since `relion_reconstruct` use current directory as its default working directory, user should ensure that `relion_reconstruct` can correctly access the particles.
+
+<a name="cryosieve_auto_cryosparc"></a>
+## Options/Arguments of `cryosieve_auto_cryosparc.py`
