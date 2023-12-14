@@ -162,6 +162,14 @@ For a detailed explanation of each `cryosieve` option, please refer to the follo
 
 The entire process may take over an hour, depending on your system resources. Multiple result files will be generated and saved in the `output/` directory. For instance, the `_iter{n}.star` file contains particles that remain after the n-th sieving iteration, and the `_postprocess_iter{n}` folder houses the postprocessing result after the n-th iteration.
 
+### [Recommended] Re-estimate poses by CryoSPARC
+
+The objective of re-estimating poses using CryoSPARC is to prevent the unintentional transfer of information from the discarded particles to those that are retained. This process of re-estimating poses with CryoSPARC can be conducted either manually or through automation using a Python script. The script, named `cryosieve_auto_cryosparc.py`, is provided by us in this repository.
+
+For manually re-estimating poses with CryoSPARC, particles must be imported using CryoSPARC’s `import particle stack` job. This importation is from the `_iter{n}.star` file, which contains particles remaining after the n-th sieving iteration. Subsequently, the process involves conducting sequential `ab-initio` jobs, followed by either `homogeneous refinement` or `non-uniform refinement` jobs.
+
+Alternatively, users can utilize the cryosieve_auto_cryosparc.py script, available in this repository, to circumvent the labor-intensive manual operations in CryoSPARC.
+
 # Options/Flags of `cryosive-core` and `cryosieve`
 
 <a name="cryosieve-core"></a>
