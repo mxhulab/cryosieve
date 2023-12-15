@@ -245,3 +245,30 @@ There are several useful remarks:
 
 <a name="cryosieve_auto_cryosparc"></a>
 ## Options/Arguments of `cryosieve_auto_cryosparc.py`
+
+The `cryosieve_auto_cryosparc.py` is a Python script designed to automatically and sequentially execute a series of operations in CryoSPARC, namely `import particle stack`, `ab-initio`, `homogenous refinement`, and `non-uniform refinement` jobs.
+
+```
+usage: cryosieve_auto_cryosparc.py [-h] [--particles_sheet PARTICLES_SHEET] [--cryosparc_user_id CRYOSPARC_USER_ID]
+                                   [--cryosparc_project_uid CRYOSPARC_PROJECT_UID] [--cryosparc_workspace_uid CRYOSPARC_WORKSPACE_UID]
+                                   [--cryosparc_lane CRYOSPARC_LANE] [--molecular_symmetry MOLECULAR_SYMMETRY]
+
+The cryosieve_auto_cryosparc.py is a Python script designed to automate CryoSPARC operations via the command line. Its purpose is to
+bypass the labor-intensive manual processes.
+
+options:
+  -h, --help            show this help message and exit
+  --particles_sheet PARTICLES_SHEET
+                        a file containing a list of starfiles; each starfile corresponds to a single-particle dataset; NOTE, absolute
+                        directory is mandatory
+  --cryosparc_user_id CRYOSPARC_USER_ID
+                        the E-mail address of the user of CryoSPARC
+  --cryosparc_project_uid CRYOSPARC_PROJECT_UID
+                        the project UID in cryoSPARC
+  --cryosparc_workspace_uid CRYOSPARC_WORKSPACE_UID
+                        the workspace UID in cryoSPARC
+  --cryosparc_lane CRYOSPARC_LANE
+                        the lane for computing resource in cryoSPARC
+  --molecular_symmetry MOLECULAR_SYMMETRY
+                        molecular symmetry
+```
