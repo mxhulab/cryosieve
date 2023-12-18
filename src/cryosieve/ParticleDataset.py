@@ -22,9 +22,10 @@ class ParticleDataset(Dataset):
         self.pixel_size = pixel_size
 
         # <Relion 3.1
-        if len(star) == 1 and (0 in star or 'images' in star):
+        # For supporting starfile>=0.5 in the future.
+        if len(star) == 1 and (0 in star or '' in star or 'images' in star):
             self.version = 2
-            self.particles = star[0] if 0 in star else star['images']
+            self.particles = star[0] if 0 in star else star[''] if '' in star else star['images']
 
             # Check keys.
             for key in ['rlnOriginX', 'rlnOriginY', 'rlnAngleRot', 'rlnAngleTilt',

@@ -18,7 +18,7 @@ For more details, please refer to the paper ["A minority of final stacks yields 
 
 ## The List of Available Demo Cases
 
-| dataset | number of particles | molecular weight (kDa) | EMPIAR link | expected result link 
+| dataset | number of particles | molecular weight (kDa) | EMPIAR link | expected result link
 | ------- | ------------------- | --------------------- | ----------- | --------------- |
 | TRPA1 | 43,585 | 688 | [EMPIAR-10024](https://www.ebi.ac.uk/empiar/EMPIAR-10024/) | [link](https://github.com/mxhulab/cryosieve-demos/tree/master/EMPIAR-10024) |
 | hemagglutinin | 130,000 | 150 | [EMPIAR-10097](https://www.ebi.ac.uk/empiar/EMPIAR-10097/) | [link](https://github.com/mxhulab/cryosieve-demos/tree/master/EMPIAR-10097) |
@@ -47,7 +47,7 @@ The CryoSieve package depends on the following libraries:
 ```
 numpy>=1.18
 mrcfile>=1.2
-starfile>=0.4
+starfile>=0.4,<0.5
 cupy>=10
 torch>=1.10
 ```
@@ -65,7 +65,7 @@ This command is specifically for a CUDA environment version 10.2. If your CUDA e
 
 ## Installing CryoSieve
 
-After preparing CuPy and PyTorch according to your CUDA environment, it is crucial to activate it before proceeding with the CryoSieve installation. 
+After preparing CuPy and PyTorch according to your CUDA environment, it is crucial to activate it before proceeding with the CryoSieve installation.
 
 We recommend using the following command to activate it directly. (replace CRYOSIEVE_ENV with the name of your custom environment).
 
