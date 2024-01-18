@@ -272,3 +272,13 @@ options:
   --molecular_symmetry MOLECULAR_SYMMETRY
                         molecular symmetry
 ```
+
+# Release Note
+
+* Version 1.2.4:
+  - Fix the bug occurring with starfile >=0.5. CryoSieve now requires starfile >=0.4, <0.5.
+  - Support gloo backend for multi-GPU version of cryosieve-core.
+  - Fix the bug of SequentialSampler occurring with pytorch >=2.
+* Version 1.2.3: Add new video tutorial.
+* Version 1.2.1: fix the bug occurring when multiple optic groups are present in a star file.
+* Version 1.2: Initial stable release.
