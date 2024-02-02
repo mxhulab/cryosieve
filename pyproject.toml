@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cryosieve"
-version = "1.2.3"
+version = "1.2.4"
 authors = [
     { name="Jianying Zhu", email="zhu-jy20@mails.tsinghua.edu.cn" },
-    { name="Qi Zhang", email="2252749718@qq.com" },
+    { name="Qi Zhang", email="q-zhang20@mails.tsinghua.edu.cn" },
     { name="Hui Zhang", email="zhanghui198@mails.ucas.ac.cn" },
     { name="Zuoqiang Shi", email="zqshi@tsinghua.edu.cn" },
     { name="Mingxu Hu", email="humingxu@mail.tsinghua.edu.cn" },
@@ -20,7 +20,7 @@ requires-python = ">=3.7"
 dependencies = [
     "numpy>=1.18",
     "mrcfile>=1.2",
-    "starfile>=0.4",
+    "starfile>=0.4,<0.5",
     "cupy>=10",
     "torch>=1.10"
 ]

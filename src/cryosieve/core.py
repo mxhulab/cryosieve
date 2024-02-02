@@ -1,6 +1,7 @@
 import argparse
 import os
 import torch
+import torch.distributed
 import cupy as cp
 import numpy as np
 from time import time
@@ -27,7 +28,13 @@ def main(args):
     is_distributed = 'RANK' in os.environ and 'WORLD_SIZE' in os.environ
     rank       = int(os.environ['RANK']) if is_distributed else 0
     world_size = int(os.environ['WORLD_SIZE']) if is_distributed else 1
-    if is_distributed: torch.distributed.init_process_group('nccl')
+    if is_distributed:
+        if torch.distributed.is_nccl_available():
+            torch.distributed.init_process_group('nccl')
+        elif torch.distributed.is_gloo_available():
+            torch.distributed.init_process_group('gloo')
+        else:
+            raise RuntimeError('Need nccl or gloo for multi-GPU cryosieve-core.')
     torch.cuda.set_device(rank)
     cp.cuda.runtime.setDevice(rank)
 

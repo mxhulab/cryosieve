@@ -2,7 +2,7 @@ import cupy as cp
 import numpy as np
 import torch
 import torch.distributed as dist
-from torch.utils.data import DataLoader, SequentialSampler
+from torch.utils.data import Subset, DataLoader
 from .kernels import convolute_ctf, highpass2d, project, translate
 from .utility import cupy_to_torch, torch_to_cupy
 
@@ -12,8 +12,8 @@ def sieve(dataset, volume, threshold, number, rank, world_size):
 
     # Take rank-th part of dataset.
     l, r = round(rank / world_size * m), round((rank + 1) / world_size * m)
-    sampler = SequentialSampler(range(l, r))
-    loader = DataLoader(dataset, batch_size, num_workers = 4, pin_memory = True, sampler = sampler)
+    subset = Subset(dataset, list(range(l, r)))
+    loader = DataLoader(subset, batch_size, num_workers = 4, pin_memory = True)
     g = torch.zeros(m, dtype = torch.float64, device = 'cuda')
     volume = cp.array(volume, dtype = cp.float64)
 
