@@ -24,20 +24,23 @@ print("=============YOU MAY START MULTIPLE JOB CHAINS SIMULATENOUSLY =====")
 
 # Set up the argument parser
 parser = argparse.ArgumentParser(description = "The cryosieve_auto_cryosparc.py is a Python script designed to automate CryoSPARC operations via the command line. Its purpose is to bypass the labor-intensive manual processes.")
-parser.add_argument("--particles_sheet", type = str, help = "a file containing a list of starfiles; each starfile corresponds to a single-particle dataset; NOTE, absolute directory is mandatory")
-parser.add_argument("--cryosparc_user_id", type = str, help = "the E-mail address of the user of CryoSPARC")
-parser.add_argument("--cryosparc_project_uid", type = str, help = "the project UID in cryoSPARC")
-parser.add_argument("--cryosparc_workspace_uid", type = str, help = "the workspace UID in cryoSPARC")
-parser.add_argument("--cryosparc_lane", type = str, help = "the lane for computing resource in cryoSPARC")
-parser.add_argument("--molecular_symmetry", type = str, help = "molecular symmetry", default = 'C1')
-
-# Parse the arguments
-args = parser.parse_args()
+parser.add_argument("--particles_sheet", type = str, help = "a file containing a list of starfiles; each starfile corresponds to a single-particle dataset; NOTE, absolute directory is mandatory", required = True)
+parser.add_argument("--cryosparc_user_id", type = str, help = "the E-mail address of the user of CryoSPARC", required = True)
+parser.add_argument("--cryosparc_project_uid", type = str, help = "the project UID in cryoSPARC", required = True)
+parser.add_argument("--cryosparc_workspace_uid", type = str, help = "the workspace UID in cryoSPARC", required = True)
+parser.add_argument("--cryosparc_lane", type = str, help = "the lane for computing resource in cryoSPARC", required = True)
+parser.add_argument("--molecular_symmetry", type = str, help = "molecular symmetry, default: %(default)s", default = 'C1')
+parser.add_argument("--force_redo_gs_split", help = "force re-do GS split", action = 'store_true')
+parser.add_argument("--num_repeats_homo", type = int, help = "number of repeats for running homogenous refinement, default: %(default)s", default = 1)
+parser.add_argument("--num_repeats_nonuniform", type = int, help = "number of repeats for running non-uniform refinement, default: %(default)s", default = 1)
 
 # If if no arguments were provided, print help information.
 if len(sys.argv) == 1:
     parser.print_help(sys.stderr)
     sys.exit(1)
+
+# Parse the arguments
+args = parser.parse_args()
 
 # List to store the read particle starfiles
 starfile_list = []
@@ -116,16 +119,17 @@ homo_refine_job_ids = []
 
 for ab_initio_job_id in ab_initio_job_ids:
 
-    homo_refine_job_ids.append(client.make_job(job_type = 'homo_refine_new', \
-                                               project_uid = args.cryosparc_project_uid, \
-                                               workspace_uid = args.cryosparc_workspace_uid, \
-                                               user_id = client.GetUser(args.cryosparc_user_id)['_id'], \
-                                               params = {'refine_symmetry' : args.molecular_symmetry, 'compute_use_ssd': False, 'refine_gs_resplit' : False}, \
-                                               input_group_connects = {'particles': "{}.particles_all_classes".format(ab_initio_job_id), \
-                                                                       'volume'   : "{}.volume_class_0".format(ab_initio_job_id)}))
+    for _ in range(args.num_repeats_homo):
+        homo_refine_job_ids.append(client.make_job(job_type = 'homo_refine_new', \
+                                                   project_uid = args.cryosparc_project_uid, \
+                                                   workspace_uid = args.cryosparc_workspace_uid, \
+                                                   user_id = client.GetUser(args.cryosparc_user_id)['_id'], \
+                                                   params = {'refine_symmetry' : args.molecular_symmetry, 'compute_use_ssd': False, 'refine_gs_resplit' : args.force_redo_gs_split}, \
+                                                   input_group_connects = {'particles': "{}.particles_all_classes".format(ab_initio_job_id), \
+                                                                           'volume'   : "{}.volume_class_0".format(ab_initio_job_id)}))
 
-    client.enqueue_job(args.cryosparc_project_uid, homo_refine_job_ids[-1], args.cryosparc_lane, client.GetUser(args.cryosparc_user_id)['_id'])
-    print("{} SUBMITTED".format(homo_refine_job_ids[-1]))
+        client.enqueue_job(args.cryosparc_project_uid, homo_refine_job_ids[-1], args.cryosparc_lane, client.GetUser(args.cryosparc_user_id)['_id'])
+        print("{} SUBMITTED".format(homo_refine_job_ids[-1]))
 
 print("CHECKING STATUS OF HOMOGENEOUS REFINEMENT JOBS")
 check_job_status(homo_refine_job_ids)
@@ -138,16 +142,17 @@ nonuniform_refine_job_ids = []
 
 for ab_initio_job_id in ab_initio_job_ids:
 
-    nonuniform_refine_job_ids.append(client.make_job(job_type = 'nonuniform_refine_new', \
-                                                     project_uid = args.cryosparc_project_uid, \
-                                                     workspace_uid = args.cryosparc_workspace_uid, \
-                                                     user_id = client.GetUser(args.cryosparc_user_id)['_id'], \
-                                                     params = {'refine_symmetry' : args.molecular_symmetry, 'compute_use_ssd': False, 'refine_gs_resplit' : False}, \
-                                                     input_group_connects = {'particles': "{}.particles_all_classes".format(ab_initio_job_id), \
-                                                                             'volume'   : "{}.volume_class_0".format(ab_initio_job_id)}))
+    for _ in range(args.num_repeats_nonuniform):
+        nonuniform_refine_job_ids.append(client.make_job(job_type = 'nonuniform_refine_new', \
+                                                         project_uid = args.cryosparc_project_uid, \
+                                                         workspace_uid = args.cryosparc_workspace_uid, \
+                                                         user_id = client.GetUser(args.cryosparc_user_id)['_id'], \
+                                                         params = {'refine_symmetry' : args.molecular_symmetry, 'compute_use_ssd': False, 'refine_gs_resplit' : args.force_redo_gs_split}, \
+                                                         input_group_connects = {'particles': "{}.particles_all_classes".format(ab_initio_job_id), \
+                                                                                 'volume'   : "{}.volume_class_0".format(ab_initio_job_id)}))
 
-    client.enqueue_job(args.cryosparc_project_uid, nonuniform_refine_job_ids[-1], args.cryosparc_lane, client.GetUser(args.cryosparc_user_id)['_id'])
-    print("{} SUBMITTED".format(nonuniform_refine_job_ids[-1]))
+        client.enqueue_job(args.cryosparc_project_uid, nonuniform_refine_job_ids[-1], args.cryosparc_lane, client.GetUser(args.cryosparc_user_id)['_id'])
+        print("{} SUBMITTED".format(nonuniform_refine_job_ids[-1]))
 
 print("CHECKING STATUS OF NON-UNIFORM REFINEMENT JOBS")
 check_job_status(nonuniform_refine_job_ids)
