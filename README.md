@@ -168,7 +168,7 @@ The objective of re-estimating poses using CryoSPARC is to prevent the unintenti
 
 For manually re-estimating poses with CryoSPARC, particles must be imported using CryoSPARC’s `import particle stack` job. This importation is from the `_iter{n}.star` file, which contains particles remaining after the n-th sieving iteration. Subsequently, the process involves conducting sequential `ab-initio` jobs, followed by either `homogeneous refinement` or `non-uniform refinement` jobs.
 
-Alternatively, users can utilize the `cryosieve_auto_cryosparc.py` script, available in this repository, to circumvent the labor-intensive manual operations in CryoSPARC. The prerequisite for executing the `cryosieve_auto_cryosparc.py` script is the loading of CryoSPARC’s environment variables. This can be accomplished by executing the command `eval $(cryosparcm env)` in the shell. The successful loading of this environment can be verified by using the `which python` command. Upon successful execution, this command should point to a Python interpreter located within CryoSPARC’s installation path. Utilizing this Python interpreter, users can execute the `cryosieve_auto_cryosparc.py` script to automatically and sequentially carry out `import particle stack`, `ab-initio`, `homogenous refinement`, and `non-uniform refinement` jobs. These operations are performed for each particle stack listed in a sheet, which is provided as an argument to the `cryosieve_auto_cryosparc.py` script. For a detailed explanation of each `cryosieve_auto_cryosparc.py` option, please refer to the following section [Options/Arguments of `cryosieve_auto_cryosparc.py`](#cryosieve_auto_cryosparc).
+Alternatively, users can utilize the `cryosieve_auto_cryosparc.py` script, available in this repository, to circumvent the labor-intensive manual operations in CryoSPARC. The prerequisite for executing the `cryosieve_auto_cryosparc.py` script is the loading of CryoSPARC’s environment variables. This can be accomplished by executing the command `eval $(cryosparcm env)` in the shell. The successful loading of this environment can be verified by using the `which python` command. Upon successful execution, this command should point to a Python interpreter located within CryoSPARC’s installation path. Utilizing this Python interpreter, users can execute the `cryosieve_auto_cryosparc.py` script to automatically and sequentially carry out `import particle stack`, `ab-initio`, `homogenous refinement`, and `non-uniform refinement` jobs. These operations are performed for each particle stack listed in a sheet, which is provided as an argument to the `cryosieve_auto_cryosparc.py` script. This script is also capable of automatically generating a summary of resolution and B-factor after executing refinement in CryoSPARC. For a detailed explanation of each `cryosieve_auto_cryosparc.py` option, please refer to the following section [Options/Arguments of `cryosieve_auto_cryosparc.py`](#cryosieve_auto_cryosparc).
 
 # Options/Arguments of `cryosive-core`, `cryosieve` and `cryosieve_auto_cryosparc.py`
 
@@ -253,8 +253,8 @@ usage: cryosieve_auto_cryosparc.py [-h] --particles_sheet PARTICLES_SHEET --cryo
                                    --cryosparc_project_uid CRYOSPARC_PROJECT_UID --cryosparc_workspace_uid
                                    CRYOSPARC_WORKSPACE_UID --cryosparc_lane CRYOSPARC_LANE
                                    [--molecular_symmetry MOLECULAR_SYMMETRY] [--force_redo_gs_split]
-                                   [--num_repeats_homo NUM_REPEATS_HOMO]
-                                   [--num_repeats_nonuniform NUM_REPEATS_NONUNIFORM]
+                                   [--num_repeats_homo NUM_REPEATS_HOMO] [--num_repeats_nonuniform NUM_REPEATS_NONUNIFORM]
+                                   [--summary] [--summary_output_filename SUMMARY_OUTPUT_FILENAME]
 
 The cryosieve_auto_cryosparc.py is a Python script designed to automate CryoSPARC operations via the command line.
 Its purpose is to bypass the labor-intensive manual processes.
@@ -280,6 +280,9 @@ optional arguments:
                         number of repeats for running homogenous refinement, default: 1
   --num_repeats_nonuniform NUM_REPEATS_NONUNIFORM
                         number of repeats for running non-uniform refinement, default: 1
+  --summary             summarize the refinements, including resolution and B-factors
+  --summary_output_filename SUMMARY_OUTPUT_FILENAME
+                        the output filename for the summary; by default, it will be based on the particles_sheet filename
 ```
 
 # Release Note
