@@ -292,9 +292,21 @@ optional arguments:
 <a name="cryosieve_auto_rh_bfactor"></a>
 ## Options/Arguments of `cryosieve_auto_rh_bfactor.py`
 
-The cryosieve_auto_rh_bfactor.py is a Python script designed to automatically determined Rosenthal-Henderson B-factor by executing CryoSPARC operations via the command line.
+The cryosieve_auto_rh_bfactor.py is a Python script designed to automatically determine Rosenthal-Henderson B-factor by executing CryoSPARC operations via the command line.
 
 ```
+usage: cryosieve_auto_rh_bfactor.py [-h] --particles_sheet PARTICLES_SHEET --cryosparc_user_id CRYOSPARC_USER_ID
+                                    --cryosparc_project_uid CRYOSPARC_PROJECT_UID --cryosparc_workspace_uid
+                                    CRYOSPARC_WORKSPACE_UID --cryosparc_lane CRYOSPARC_LANE
+                                    [--molecular_symmetry MOLECULAR_SYMMETRY] [--force_redo_gs_split] [--nonuniform]
+                                    [--halvings_times HALVINGS_TIMES]
+                                    [--particles_sheet_with_reduction PARTICLES_SHEET_WITH_REDUCTION]
+                                    [--num_repeats NUM_REPEATS] [--rh_bfactor_data_points RH_BFACTOR_DATA_POINTS]
+                                    [--voltage_200kev] [--voltage_300kev]
+
+The cryosieve_auto_rh_bfactor.py is a Python script designed to automatically determine Rosenthal-Henderson B-factor by
+executing CryoSPARC operations via the command line.
+
 options:
   -h, --help            show this help message and exit
   --particles_sheet PARTICLES_SHEET
