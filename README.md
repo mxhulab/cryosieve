@@ -170,6 +170,10 @@ For manually re-estimating poses with CryoSPARC, particles must be imported usin
 
 Alternatively, users can utilize the `cryosieve_auto_cryosparc.py` script, available in this repository, to circumvent the labor-intensive manual operations in CryoSPARC. The prerequisite for executing the `cryosieve_auto_cryosparc.py` script is the loading of CryoSPARC’s environment variables. This can be accomplished by executing the command `eval $(cryosparcm env)` in the shell. The successful loading of this environment can be verified by using the `which python` command. Upon successful execution, this command should point to a Python interpreter located within CryoSPARC’s installation path. Utilizing this Python interpreter, users can execute the `cryosieve_auto_cryosparc.py` script to automatically and sequentially carry out `import particle stack`, `ab-initio`, `homogenous refinement`, and `non-uniform refinement` jobs. These operations are performed for each particle stack listed in a sheet, which is provided as an argument to the `cryosieve_auto_cryosparc.py` script. This script is also capable of automatically generating a summary of resolution and B-factor after executing refinement in CryoSPARC. For a detailed explanation of each `cryosieve_auto_cryosparc.py` option, please refer to the following section [Options/Arguments of `cryosieve_auto_cryosparc.py`](#cryosieve_auto_cryosparc).
 
+### [Optional] Calculate the Rosenthal-Henderson B-factor by automatically invoking CryoSPARC
+
+The gold standard for assessing the quality of a set of single particle images involves determining its Rosenthal-Henderson B-factor. A lower B-factor indicates better quality. Utilizing CryoSieve to filter out ineffective particles can reduce the B-factor, suggesting improved quality among the remaining particles. Users can leverage the `cryosieve_auto_rh_bfactor.py` script, provided in this repository, to automatically calculate the Rosenthal-Henderson B-factor by invoking CryoSPARC. The script's arguments/options are similar to those in `cryosieve_auto_cryosparc.py`, with a few differences. For a detailed explanation of each `cryosieve_auto_rh_bfactor.py` option, please refer to the following section [Options/Arguments of `cryosieve_auto_rh_bfactor.py`](#cryosieve_auto_rh_bfactor).
+
 # Options/Arguments of `cryosive-core`, `cryosieve` and `cryosieve_auto_cryosparc.py`
 
 <a name="cryosieve-core"></a>
@@ -284,6 +288,46 @@ optional arguments:
   --summary_output_filename SUMMARY_OUTPUT_FILENAME
                         the output filename for the summary; by default, it will be based on the particles_sheet filename
 ```
+
+<a name="cryosieve_auto_rh_bfactor"></a>
+## Options/Arguments of `cryosieve_auto_rh_bfactor.py`
+
+The cryosieve_auto_rh_bfactor.py is a Python script designed to automatically determined Rosenthal-Henderson B-factor by executing CryoSPARC operations via the command line.
+
+```
+options:
+  -h, --help            show this help message and exit
+  --particles_sheet PARTICLES_SHEET
+                        a file containing a list of starfiles; each starfile corresponds to a single-particle dataset; NOTE,
+                        absolute directory is mandatory
+  --cryosparc_user_id CRYOSPARC_USER_ID
+                        the E-mail address of the user of CryoSPARC
+  --cryosparc_project_uid CRYOSPARC_PROJECT_UID
+                        the project UID in cryoSPARC
+  --cryosparc_workspace_uid CRYOSPARC_WORKSPACE_UID
+                        the workspace UID in cryoSPARC
+  --cryosparc_lane CRYOSPARC_LANE
+                        the lane for computing resource in cryoSPARC
+  --molecular_symmetry MOLECULAR_SYMMETRY
+                        molecular symmetry, default: C1
+  --force_redo_gs_split
+                        force re-do GS split
+  --nonuniform          use non-uniform refinement instead of homogeneous refinement
+  --halvings_times HALVINGS_TIMES
+                        number of times executing halvings, default: 4
+  --particles_sheet_with_reduction PARTICLES_SHEET_WITH_REDUCTION
+                        the output particle sheeting containing a series of halvings; by default, it will be based on the
+                        particles_sheet filename
+  --num_repeats NUM_REPEATS
+                        number of repeats for running refinement, default: 1
+  --rh_bfactor_data_points RH_BFACTOR_DATA_POINTS
+                        the output filename containing number of particles and resolution; they are data points for
+                        determining Rosenthal-Henderson B-factor; by default; it will be based on the particle_sheet
+                        filename
+  --voltage_200kev      micrographs are obtained using 200 keV electron microscopy
+  --voltage_300kev      micrographs are obtained using 300 keV electron microscopy
+  ```
+
 
 # Release Note
 
