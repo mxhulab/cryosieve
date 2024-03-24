@@ -1,9 +1,22 @@
-import cupy as cp
-import numpy as np
 import mrcfile
 import subprocess
+import numpy as np
+try:
+    import cupy as cp
+except:
+    pass
 from time import time
 from torch.utils.dlpack import to_dlpack, from_dlpack
+
+def check_cupy():
+    try:
+        import cupy
+    except ModuleNotFoundError:
+        print('[ERROR] CuPy module not found.')
+        exit(1)
+    except ImportError:
+        print('[ERROR] Error occured when importing CuPy. Please check your CUDA environment or GPU card.')
+        exit(1)
 
 def cupy_to_torch(x):
     return from_dlpack(x.toDlpack())

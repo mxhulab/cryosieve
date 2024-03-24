@@ -1,14 +1,17 @@
 import argparse
 import os
+import sys
 import torch
 import torch.distributed
-import cupy as cp
 import numpy as np
 from time import time
-
-from .ParticleDataset import ParticleDataset
-from .utility import mrcread, run_commands
-from .sieve import sieve
+try:
+    import cupy as cp
+    from .ParticleDataset import ParticleDataset
+    from .utility import mrcread, run_commands
+    from .sieve import sieve
+except:
+    pass
 
 def core_parser():
     parser = argparse.ArgumentParser(description = 'CryoSieve core.')
@@ -82,7 +85,12 @@ def main(args):
 def core():
     parser = core_parser()
     parser.add_argument('--num_gpus',        type = int,   default  = 1,     help = 'number of GPUs to execute the cryosieve program, 1 by default.')
+    if len(sys.argv) == 1:
+        parser.print_help()
+        exit()
     args = parser.parse_args()
+    from .utility import check_cupy
+    check_cupy()
 
     if args.num_gpus == 1:
         time0 = time()
