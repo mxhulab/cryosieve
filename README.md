@@ -33,7 +33,7 @@ For more details, please refer to the paper ["A minority of final stacks yields 
 
 # Installation
 
-CryoSieve is an open-source software, developed using Python, and is available as a Python package. You can access our source code [on GitHub](https://github.com/mxhulab/cryosieve).
+CryoSieve is an open-source software, developed using Python, and is available as a Python package. Please access our source code [on GitHub](https://github.com/mxhulab/cryosieve).
 
 ## Prerequisites
 
@@ -55,23 +55,23 @@ torch>=1.10
 
 ## Preparation of CUDA Environment
 
-We recommend you install CuPy and PyTorch initially, as their installation largely depends on your CUDA environment. Please note, your PyTorch package should be CUDA-capable. To streamline this process, we suggest preparing a conda environment with the following commands.
+We recommend installing CuPy and PyTorch initially, as their installation largely depends on the CUDA environment. Please note, PyTorch should be CUDA-capable. To streamline this process, we suggest preparing a conda environment with the following commands.
 
 For CUDA version <= 11.7:
 ```
 conda create -n CRYOSIEVE_ENV python=3.8 cudatoolkit=10.2 cupy=10.0 pytorch=1.10 -c pytorch -c conda-forge
 ```
-Please note that this command is tailored for CUDA version 10.2. For a different CUDA version, you should adjust the `cudatoolkit` version accordingly. You can also modify the versions of Python, CuPy, and PyTorch based on your requirements, while ensuring they meet the minimal requirements of CryoSieve.
+Please note that this command is tailored for CUDA version 10.2. To accommodate a different CUDA version, adjust the `cudatoolkit` version accordingly. Modify the versions of Python, CuPy, and PyTorch based on requirements, ensuring compatibility with the minimal requirements of CryoSieve.
 
 For CUDA version >= 11.8:
 ```
 conda create -n CRYOSIEVE_ENV python=3.10 cupy=12.0 pytorch pytorch-cuda=12.1 -c pytorch -c nvidia -c conda-forge
 ```
-Please note that This command is tailored for CUDA environment version 12.1. For a different CUDA version, you should adjust `pytorch-cuda` version accordingly.
+Please note that This command is tailored for CUDA environment version 12.1. For a different CUDA version, adjust `pytorch-cuda` version accordingly.
 
 ## Installing CryoSieve
 
-After preparing CuPy and PyTorch according to your CUDA environment, it is crucial to activate it before proceeding with the CryoSieve installation.
+After preparing CuPy and PyTorch, it is crucial to activate it before proceeding with the CryoSieve installation.
 ```
 conda activate CRYOSIEVE_ENV
 ```
@@ -79,13 +79,10 @@ conda activate CRYOSIEVE_ENV
 Then, we turn to the step of installing CryoSieve. CryoSieve can be installed either via `pip` or `conda`.
 
 To install CryoSieve using `pip`, execute the following command:
-
 ```
 pip install cryosieve
 ```
-
 Alternatively, to install CryoSieve using `conda`, execute the following command:
-
 ```
 conda install -c mxhulab cryosieve
 ```
@@ -93,11 +90,9 @@ conda install -c mxhulab cryosieve
 ## Verifying Installation
 
 You can verify whether CryoSieve has been installed successfully by running the following command:
-
 ```
 cryosieve -h
 ```
-
 This should display the help information for CryoSieve, indicating a successful installation.
 
 # Tutorial
