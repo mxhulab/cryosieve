@@ -33,12 +33,12 @@ For more details, please refer to the paper ["A minority of final stacks yields 
 
 # Installation
 
-CryoSieve is an open-source software, developed using Python, and is available as a Python package. You can access our source code [on GitHub](https://github.com/mxhulab/cryosieve).
+CryoSieve is an open-source software, developed using Python, and is available as a Python package. Please access our source code [on GitHub](https://github.com/mxhulab/cryosieve).
 
 ## Prerequisites
 
 - Python version 3.7 or later.
-- NVIDIA CUDA library installed in the user's environment.
+- NVIDIA CUDA library 10.2 or later installed in the user's environment.
 
 ## Dependencies
 
@@ -48,27 +48,30 @@ The CryoSieve package depends on the following libraries:
 numpy>=1.18
 mrcfile>=1.2
 starfile>=0.4,<0.5
+pandans<2.2
 cupy>=10
 torch>=1.10
 ```
 
 ## Preparation of CUDA Environment
 
-We recommend you install CuPy and PyTorch initially, as their installation largely depends on your CUDA environment. Please note, your PyTorch package should be CUDA-capable.
+We recommend installing CuPy and PyTorch initially, as their installation largely depends on the CUDA environment. Please note, PyTorch should be CUDA-capable. To streamline this process, we suggest preparing a conda environment with the following commands.
 
-To streamline this process, we suggest preparing a conda environment with the following command:
+For CUDA version <= 11.7:
 ```
-conda create -n CRYOSIEVE_ENV python=3.10 cupy=10.2 cudatoolkit=10.2 pytorch=1.12.1=py3.10_cuda10.2_cudnn7.6.5_0 -c conda-forge -c pytorch
+conda create -n CRYOSIEVE_ENV python=3.8 cudatoolkit=10.2 cupy=10.0 pytorch=1.10 -c pytorch -c conda-forge
 ```
+Please note that this command is tailored for CUDA version 10.2. To accommodate a different CUDA version, adjust the `cudatoolkit` version accordingly. Modify the versions of Python, CuPy, and PyTorch based on requirements, ensuring compatibility with the minimal requirements of CryoSieve.
 
-This command is specifically for a CUDA environment version 10.2. If your CUDA environment is higher than 10.2, adjust the command based on the suitable variants and versions recommended by the [CuPy](https://cupy.dev) and [PyTorch](https://pytorch.org) developers for your specific CUDA environment.
+For CUDA version >= 11.8:
+```
+conda create -n CRYOSIEVE_ENV python=3.10 cupy=12.0 pytorch pytorch-cuda=12.1 -c pytorch -c nvidia -c conda-forge
+```
+Please note that This command is tailored for CUDA environment version 12.1. For a different CUDA version, adjust `pytorch-cuda` version accordingly.
 
 ## Installing CryoSieve
 
-After preparing CuPy and PyTorch according to your CUDA environment, it is crucial to activate it before proceeding with the CryoSieve installation.
-
-We recommend using the following command to activate it directly. (replace CRYOSIEVE_ENV with the name of your custom environment).
-
+After preparing CuPy and PyTorch, it is crucial to activate it before proceeding with the CryoSieve installation.
 ```
 conda activate CRYOSIEVE_ENV
 ```
@@ -76,13 +79,10 @@ conda activate CRYOSIEVE_ENV
 Then, we turn to the step of installing CryoSieve. CryoSieve can be installed either via `pip` or `conda`.
 
 To install CryoSieve using `pip`, execute the following command:
-
 ```
 pip install cryosieve
 ```
-
 Alternatively, to install CryoSieve using `conda`, execute the following command:
-
 ```
 conda install -c mxhulab cryosieve
 ```
@@ -90,11 +90,9 @@ conda install -c mxhulab cryosieve
 ## Verifying Installation
 
 You can verify whether CryoSieve has been installed successfully by running the following command:
-
 ```
 cryosieve -h
 ```
-
 This should display the help information for CryoSieve, indicating a successful installation.
 
 # Tutorial
@@ -162,19 +160,19 @@ For a detailed explanation of each `cryosieve` option, please refer to the follo
 
 The entire process may take over an hour, depending on your system resources. Multiple result files will be generated and saved in the `output/` directory. For instance, the `_iter{n}.star` file contains particles that remain after the n-th sieving iteration, and the `_postprocess_iter{n}` folder houses the postprocessing result after the n-th iteration.
 
-### [Recommended] Re-estimate poses by CryoSPARC
+### [Recommended] Re-estimate poses
 
-The objective of re-estimating poses using CryoSPARC is to prevent the unintentional transfer of information from the discarded particles to those that are retained. This process of re-estimating poses with CryoSPARC can be conducted either manually or through automation using a Python script. The script, named `cryosieve_auto_cryosparc.py`, is provided by us in this repository.
+The objective of re-estimating poses is to prevent the unintentional transfer of information from the discarded particles to those that are retained. This process of re-estimating poses with CryoSPARC can be performed manually or automated using a Python module. We provide a Python script named `cryosieve-csrefine` in this repository for this purpose.
 
 For manually re-estimating poses with CryoSPARC, particles must be imported using CryoSPARC’s `import particle stack` job. This importation is from the `_iter{n}.star` file, which contains particles remaining after the n-th sieving iteration. Subsequently, the process involves conducting sequential `ab-initio` jobs, followed by either `homogeneous refinement` or `non-uniform refinement` jobs.
 
-Alternatively, users can utilize the `cryosieve_auto_cryosparc.py` script, available in this repository, to circumvent the labor-intensive manual operations in CryoSPARC. The prerequisite for executing the `cryosieve_auto_cryosparc.py` script is the loading of CryoSPARC’s environment variables. This can be accomplished by executing the command `eval $(cryosparcm env)` in the shell. The successful loading of this environment can be verified by using the `which python` command. Upon successful execution, this command should point to a Python interpreter located within CryoSPARC’s installation path. Utilizing this Python interpreter, users can execute the `cryosieve_auto_cryosparc.py` script to automatically and sequentially carry out `import particle stack`, `ab-initio`, `homogenous refinement`, and `non-uniform refinement` jobs. These operations are performed for each particle stack listed in a sheet, which is provided as an argument to the `cryosieve_auto_cryosparc.py` script. This script is also capable of automatically generating a summary of resolution and B-factor after executing refinement in CryoSPARC. For a detailed explanation of each `cryosieve_auto_cryosparc.py` option, please refer to the following section [Options/Arguments of `cryosieve_auto_cryosparc.py`](#cryosieve_auto_cryosparc).
+Alternatively, users can utilize the `cryosieve-csrefine` command, available in this repository, to streamline the labor-intensive manual operations in CryoSPARC. This script automates the sequential execution of `import particle stack`, `ab-initio`, `homogenous refinement` or `non-uniform refinement` jobs for each input particle stack. Additionally, it generates a summary of resolutions and B-factors. For a detailed explanation of each option available in `cryosieve-csrefine`, please refer to the following section [Options/Arguments of `cryosieve-csrefine`](#cryosieve-csrefine).
 
-### [Optional] Calculate the Rosenthal-Henderson B-factor by automatically invoking CryoSPARC
+### [Optional] Calculate the Rosenthal-Henderson B-factor
 
-The gold standard for assessing the quality of a set of single particle images involves determining its Rosenthal-Henderson B-factor. A lower B-factor indicates better quality. Utilizing CryoSieve to filter out ineffective particles can reduce the B-factor, suggesting improved quality among the remaining particles. Users can leverage the `cryosieve_auto_rh_bfactor.py` script, provided in this repository, to automatically calculate the Rosenthal-Henderson B-factor by invoking CryoSPARC. The script's arguments/options are similar to those in `cryosieve_auto_cryosparc.py`, with a few differences. For a detailed explanation of each `cryosieve_auto_rh_bfactor.py` option, please refer to the following section [Options/Arguments of `cryosieve_auto_rh_bfactor.py`](#cryosieve_auto_rh_bfactor).
+The gold standard for assessing the quality of a set of single particle images involves determining its Rosenthal-Henderson B-factor. A lower B-factor indicates better quality. Utilizing CryoSieve to filter out ineffective particles can reduce the B-factor, suggesting improved quality among the remaining particles. Users can leverage the `cryosieve-csrhbfactor` command to automatically calculate the Rosenthal-Henderson B-factor by CryoSPARC. The script's arguments/options are similar to those in `cryosieve-csrhbfactor`. For a detailed explanation of each `cryosieve-csrhbfactor` option, please refer to the following section [Options/Arguments of `cryosieve-csrhbfactor`](#cryosieve-csrhbfactor).
 
-# Options/Arguments of `cryosive-core`, `cryosieve` and `cryosieve_auto_cryosparc.py`
+# Options/Arguments
 
 <a name="cryosieve-core"></a>
 ## Options/Arguments of `cryosieve-core`
@@ -208,7 +206,7 @@ options:
 <a name="cryosieve"></a>
 ## Options/Arguments of `cryosieve`
 
-The program `cryosieve` is an integreted program iteratively calling relion and `cryosieve-core` to do sieving process.
+The program `cryosieve` is an integreted program iteratively calling RELION and `cryosieve-core` to do sieving process.
 
 ```
 $ cryosieve -h
@@ -227,7 +225,7 @@ options:
   --i I                 input star file path.
   --o O                 output path prefix.
   --angpix ANGPIX       pixelsize in Angstrom.
-  --sym SYM             molecular symmetry, c1 by default.
+  --sym SYM             molecular symmetry, C1 by default.
   --num_iters NUM_ITERS
                         number of iterations for applying CryoSieve, 10 by default.
   --frequency_start FREQUENCY_START
@@ -244,105 +242,96 @@ options:
 There are several useful remarks:
 
 - CryoSieve utilizes the `RECONSTRUCT_SOFTWARE` in its reconstruction command. This enables you to enhance the speed of the reconstruction step through multiprocessing by using the option `--reconstruct_software "mpirun -n 5 relion_reconstruct_mpi"`. Additionally, you can further boost the reconstruction speed by using the option `--reconstruct_software "mpirun -n 5 relion_reconstruct_mpi --j 20"`, leveraging multi-threading.
-- If POSTPROCESS_SOFTWARE is not given, CryoSieve will skip the postprocessing step. Notice that postprocessing is not necessary for the sieving procedure.
+- If `POSTPROCESS_SOFTWARE` is not given, CryoSieve will skip the postprocessing step. Notice that postprocessing is not necessary for the sieving procedure.
 - Since `relion_reconstruct` use current directory as its default working directory, user should ensure that `relion_reconstruct` can correctly access the particles.
 
-<a name="cryosieve_auto_cryosparc"></a>
-## Options/Arguments of `cryosieve_auto_cryosparc.py`
+<a name="cryosieve-csrefine"></a>
+## Options/Arguments of `cryosieve-csrefine`
 
-The `cryosieve_auto_cryosparc.py` is a Python script designed to automatically and sequentially execute a series of operations in CryoSPARC, namely `import particle stack`, `ab-initio`, `homogenous refinement`, and `non-uniform refinement` jobs.
-
-```
-usage: cryosieve_auto_cryosparc.py [-h] --particles_sheet PARTICLES_SHEET --cryosparc_user_id CRYOSPARC_USER_ID
-                                   --cryosparc_project_uid CRYOSPARC_PROJECT_UID --cryosparc_workspace_uid
-                                   CRYOSPARC_WORKSPACE_UID --cryosparc_lane CRYOSPARC_LANE
-                                   [--molecular_symmetry MOLECULAR_SYMMETRY] [--force_redo_gs_split]
-                                   [--num_repeats_homo NUM_REPEATS_HOMO] [--num_repeats_nonuniform NUM_REPEATS_NONUNIFORM]
-                                   [--summary] [--summary_output_filename SUMMARY_OUTPUT_FILENAME]
-
-The cryosieve_auto_cryosparc.py is a Python script designed to automate CryoSPARC operations via the command line.
-Its purpose is to bypass the labor-intensive manual processes.
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --particles_sheet PARTICLES_SHEET
-                        a file containing a list of starfiles; each starfile corresponds to a single-particle
-                        dataset; NOTE, absolute directory is mandatory
-  --cryosparc_user_id CRYOSPARC_USER_ID
-                        the E-mail address of the user of CryoSPARC
-  --cryosparc_project_uid CRYOSPARC_PROJECT_UID
-                        the project UID in cryoSPARC
-  --cryosparc_workspace_uid CRYOSPARC_WORKSPACE_UID
-                        the workspace UID in cryoSPARC
-  --cryosparc_lane CRYOSPARC_LANE
-                        the lane for computing resource in cryoSPARC
-  --molecular_symmetry MOLECULAR_SYMMETRY
-                        molecular symmetry, default: C1
-  --force_redo_gs_split
-                        force re-do GS split
-  --num_repeats_homo NUM_REPEATS_HOMO
-                        number of repeats for running homogenous refinement, default: 1
-  --num_repeats_nonuniform NUM_REPEATS_NONUNIFORM
-                        number of repeats for running non-uniform refinement, default: 1
-  --summary             summarize the refinements, including resolution and B-factors
-  --summary_output_filename SUMMARY_OUTPUT_FILENAME
-                        the output filename for the summary; by default, it will be based on the particles_sheet filename
-```
-
-<a name="cryosieve_auto_rh_bfactor"></a>
-## Options/Arguments of `cryosieve_auto_rh_bfactor.py`
-
-The cryosieve_auto_rh_bfactor.py is a Python script designed to automatically determine Rosenthal-Henderson B-factor by executing CryoSPARC operations via the command line.
+The program `cryosieve-csrefine` is designed to automatically and sequentially execute a series of operations in CryoSPARC, namely `import particle stack`, `ab-initio`, `homogenous refinement` or `non-uniform refinement` jobs.
 
 ```
-usage: cryosieve_auto_rh_bfactor.py [-h] --particles_sheet PARTICLES_SHEET --cryosparc_user_id CRYOSPARC_USER_ID
-                                    --cryosparc_project_uid CRYOSPARC_PROJECT_UID --cryosparc_workspace_uid
-                                    CRYOSPARC_WORKSPACE_UID --cryosparc_lane CRYOSPARC_LANE
-                                    [--molecular_symmetry MOLECULAR_SYMMETRY] [--force_redo_gs_split] [--nonuniform]
-                                    [--halvings_times HALVINGS_TIMES]
-                                    [--particles_sheet_with_reduction PARTICLES_SHEET_WITH_REDUCTION]
-                                    [--num_repeats NUM_REPEATS] [--rh_bfactor_data_points RH_BFACTOR_DATA_POINTS]
-                                    [--voltage_200kev] [--voltage_300kev]
+$ cryosieve-csrefine -h
+usage: cryosieve-csrefine [-h] [--i I [I ...]] [--directory DIRECTORY] [--o O] [--sym SYM] [--ref REF] [--repeat REPEAT] --user USER
+                          --project PROJECT --workspace WORKSPACE --lane LANE [--nu] [--resplit] [--workers WORKERS]
 
-The cryosieve_auto_rh_bfactor.py is a Python script designed to automatically determine Rosenthal-Henderson B-factor by
-executing CryoSPARC operations via the command line.
+cryosieve-csrefine: automatic SPA 3D-refinement by calling CryoSPARC.
 
 options:
   -h, --help            show this help message and exit
-  --particles_sheet PARTICLES_SHEET
-                        a file containing a list of starfiles; each starfile corresponds to a single-particle dataset; NOTE,
-                        absolute directory is mandatory
-  --cryosparc_user_id CRYOSPARC_USER_ID
-                        the E-mail address of the user of CryoSPARC
-  --cryosparc_project_uid CRYOSPARC_PROJECT_UID
-                        the project UID in cryoSPARC
-  --cryosparc_workspace_uid CRYOSPARC_WORKSPACE_UID
-                        the workspace UID in cryoSPARC
-  --cryosparc_lane CRYOSPARC_LANE
-                        the lane for computing resource in cryoSPARC
-  --molecular_symmetry MOLECULAR_SYMMETRY
-                        molecular symmetry, default: C1
-  --force_redo_gs_split
-                        force re-do GS split
-  --nonuniform          use non-uniform refinement instead of homogeneous refinement
-  --halvings_times HALVINGS_TIMES
-                        number of times executing halvings, default: 4
-  --particles_sheet_with_reduction PARTICLES_SHEET_WITH_REDUCTION
-                        the output particle sheeting containing a series of halvings; by default, it will be based on the
-                        particles_sheet filename
-  --num_repeats NUM_REPEATS
-                        number of repeats for running refinement, default: 1
-  --rh_bfactor_data_points RH_BFACTOR_DATA_POINTS
-                        the output filename containing number of particles and resolution; they are data points for
-                        determining Rosenthal-Henderson B-factor; by default; it will be based on the particle_sheet
-                        filename
-  --voltage_200kev      micrographs are obtained using 200 keV electron microscopy
-  --voltage_300kev      micrographs are obtained using 300 keV electron microscopy
-  ```
+  --i I [I ...]         input star file(s) or txt file(s) containing a list of star files.
+  --directory DIRECTORY
+                        directory of particles, empty (current directory) by default.
+  --o O                 output summary csv file path. If not provided, no summary is written.
+  --sym SYM             molecular symmetry, C1 by default.
+  --ref REF             initial reference model. If not provided, CryoSPARC's ab-initio job will be used.
+  --repeat REPEAT       number of trials, 1 by default.
+  --user USER           e-mail address of the user of CryoSPARC.
+  --project PROJECT     project UID in CryoSPARC.
+  --workspace WORKSPACE
+                        workspace UID in CryoSPARC.
+  --lane LANE           lane selected for computing in CryoSPARC.
+  --nu                  use non-uniform refinement.
+  --resplit             force re-do GS split.
+  --workers WORKERS     number of workers to run CryoSPARC job, unlimited by default.
+```
 
+There are several useful remarks:
+
+- The input parameter `--i` supports multiple star files, such as `--i a.star b.star c.star`. Wildcards can also be used, for example, `--i output/_iter?.star` will include `output/_iter0.star`, `output/_iter1.star` up to `output/_iter9.star` in the previous example. Additionally, the input file can be a `.txt` file containing star files, with each file listed on a separate line.
+- When the `--o` parameter is provided, a summary report including resolutions and B-factors estimated by CryoSPARC will be written to a file in CSV format.
+- This program submits a series of jobs within a designated project and workspace. The compute resources are determined by the lane parameter. By default, the program refines all star files in parallel, but the option `--workers` allows you to limit the number of jobs executing simultaneously.
+
+For example, in the previous EMPAIR-11233 case, you can re-estimated all its output star files with a single command:
+```
+cryosieve-csrefine --i output/_iter?.star --o summary.csv --sym C4 --user XXX_YOUR_USER_EMAIL_XXX --project P1 --workspace W1 --lane XXX_YOUR_LANE_XXX
+```
+
+<a name="cryosieve-csrhbfactor"></a>
+## Options/Arguments of `cryosieve-csrhbfactor`
+
+The program `cryosieve-csrhbfactor` is designed to automatically determine Rosenthal-Henderson B-factor by calling `cryosieve-csrefine`.
+
+```
+$ cryosieve-csrhbfactor -h
+usage: cryosieve-csrhbfactor [-h] [--i I [I ...]] [--directory DIRECTORY] --o O [--sym SYM] [--ref REF] [--voltage VOLTAGE]
+                             [--repeat REPEAT] [--halves HALVES] --user USER --project PROJECT --workspace WORKSPACE --lane LANE [--nu]
+                             [--resplit] [--workers WORKERS]
+
+cryosieve-csrhbfactor: automatic Rosenthal-Henderson B-factor estimation by calling CryoSPARC.
+
+options:
+  -h, --help            show this help message and exit
+  --i I [I ...]         input star file(s) or txt file(s) containing a list of star files.
+  --directory DIRECTORY
+                        directory of particles, empty (current directory) by default.
+  --o O                 output summary csv file path.
+  --sym SYM             molecular symmetry, C1 by default.
+  --ref REF             initial reference model. If not provided, CryoSPARC's ab-initio job will be used.
+  --voltage VOLTAGE     acceleration voltage (kV), 300 by default. Only 200 and 300 supported!
+  --repeat REPEAT       number of trials, 1 by default.
+  --halves HALVES       number of times executing halvings, 4 by default.
+  --user USER           e-mail address of the user of CryoSPARC.
+  --project PROJECT     project UID in CryoSPARC.
+  --workspace WORKSPACE
+                        workspace UID in CryoSPARC.
+  --lane LANE           lane selected for computing in CryoSPARC.
+  --nu                  use non-uniform refinement.
+  --resplit             force re-do GS split.
+  --workers WORKERS     number of workers to run CryoSPARC job, unlimited by default.
+```
+
+There are several useful remarks:
+
+- The `cryosieve-csrhbfactor` program shares most parameters with `cryosieve-csrefine`, and their usage is similar.
+- Estimating the Rosenthal-Henderson B-factor involves a computationally intensive process. It requires iteratively halving the particle dataset and estimating the resolutions for each subset. For example, if you want to estimate the Rosenthal-Henderson B-factors for all 10 output stacks from the previous demo, and you choose to perform 3 trials with each stack using up to 4th halves, it would involve a total of 10 * 3 * (4 + 1) = 150 rounds of 3D-refinement.
 
 # Release Note
 
+* Version 1.2.5:
+  - Add two new programs: `cryosieve-csrefine` and `cryosieve-csrhbfactor`.
+  - Introduce a simplified command for preparing the Conda environment.
+  - Add support for CUDA >=11.8.
 * Version 1.2.4:
   - Fix the bug occurring with starfile >=0.5. CryoSieve now requires starfile >=0.4, <0.5.
   - Support gloo backend for multi-GPU version of cryosieve-core.

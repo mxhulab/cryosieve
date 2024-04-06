@@ -1,9 +1,8 @@
 import argparse
 import shutil
+import sys
 import numpy as np
 from pathlib import Path
-
-from .utility import run_commands
 
 def parse_argument():
     parser = argparse.ArgumentParser(description = 'CryoSieve: a particle sorting and sieving software for single particle analysis in cryo-EM.')
@@ -12,7 +11,7 @@ def parse_argument():
     parser.add_argument('--i',                    type = str,   required = True,  help = 'input star file path.')
     parser.add_argument('--o',                    type = str,   required = True,  help = 'output path prefix.')
     parser.add_argument('--angpix',               type = float, required = True,  help = 'pixelsize in Angstrom.')
-    parser.add_argument('--sym',                  type = str,   default  = 'c1',  help = 'molecular symmetry, c1 by default.')
+    parser.add_argument('--sym',                  type = str,   default  = 'C1',  help = 'molecular symmetry, C1 by default.')
     parser.add_argument('--num_iters',            type = int,   default  = 10,    help = 'number of iterations for applying CryoSieve, 10 by default.')
     parser.add_argument('--frequency_start',      type = float, default  = 50.,   help = 'starting threshold frquency, in Angstrom, 50A by default.')
     parser.add_argument('--frequency_end',        type = float, default  = 3.,    help = 'ending threshold frquency, in Angstrom, 3A by default.')
@@ -20,10 +19,15 @@ def parse_argument():
     parser.add_argument('--mask',                 type = str,   required = True,  help = 'mask file path.')
     parser.add_argument('--balance',              action = 'store_true',          help = 'make remaining particles in different subsets in same size.')
     parser.add_argument('--num_gpus',             type = int,   default  = 1,     help = 'number of gpus to execute CryoSieve core program, 1 by default.')
+    if len(sys.argv) == 1:
+        parser.print_help()
+        exit()
     return parser.parse_args()
 
 def main():
     args = parse_argument()
+    from .utility import check_cupy
+    check_cupy()
 
     # copy the star file to output directory as iteration 0.
     src = Path(f'{args.i}')
@@ -39,6 +43,7 @@ def main():
         pass
 
     # go.
+    from .utility import run_commands
     frequences = 1 / np.linspace(1.0 / args.frequency_start, 1.0 / args.frequency_end, args.num_iters)
     overall_retention_ratio = 1.0
     for i in range(args.num_iters):
