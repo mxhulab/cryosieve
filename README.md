@@ -344,5 +344,5 @@ There are several useful remarks:
 
 # FAQ
 
-A: I successfully executed CryoSieve, but when I tried to import the sieve particles into cryoSPARC to re-estimate their poses, I encountered an error. How can I resolve this?
-Q: When setting up the `import stack` job in CryoSPARC, ensure that the `particle_data_path` option is correctly configured.
+- A: I successfully executed CryoSieve, but when I tried to import the sieve particles into cryoSPARC to re-estimate their poses, I encountered an error. How can I resolve this?
+- Q: When setting up the `import stack` job in CryoSPARC, ensure that the `particle_data_path` option is correctly configured.
