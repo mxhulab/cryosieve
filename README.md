@@ -12,6 +12,8 @@ For certain datasets, the precision of CryoSieve's particle subset selection is 
 
 A video tutorial is available within this repository. You can directly download it [here](cryosieve_video_tutorial.mp4).
 
+We also provide [a JoVE paper](https://www.jove.com/t/66617/enhancing-density-maps-removing-majority-particles-single-particle) in the format of case studies, which includes video instructions on how to use CryoSieve.
+
 ## Publications
 
 For more details, please refer to the paper ["A minority of final stacks yields superior amplitude in single-particle cryo-EM"](https://www.nature.com/articles/s41467-023-43555-x). If you find that CryoSieve contributes to your work, we kindly request you to cite this paper.
@@ -339,3 +341,8 @@ There are several useful remarks:
 * Version 1.2.3: Add new video tutorial.
 * Version 1.2.1: fix the bug occurring when multiple optic groups are present in a star file.
 * Version 1.2: Initial stable release.
+
+# FAQ
+
+A: I successfully executed CryoSieve, but when I tried to import the sieve particles into cryoSPARC to re-estimate their poses, I encountered an error. How can I resolve this?
+Q: When setting up the `import stack` job in CryoSPARC, ensure that the `particle_data_path` option is correctly configured.
