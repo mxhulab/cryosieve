@@ -63,13 +63,13 @@ For CUDA version <= 11.7:
 ```
 conda create -n CRYOSIEVE_ENV python=3.8 cudatoolkit=10.2 cupy=10.0 pytorch=1.10 -c pytorch -c conda-forge
 ```
-Please note that this command is tailored for CUDA version 10.2. To accommodate a different CUDA version, adjust the `cudatoolkit` version accordingly. Modify the versions of Python, CuPy, and PyTorch based on requirements, ensuring compatibility with the minimal requirements of CryoSieve.
+Please note that this command is tailored for CUDA version 10.2. To accommodate a different CUDA version, adjust the `cudatoolkit` version accordingly. Modify the versions of Python, [CuPy](https://cupy.dev), and [PyTorch](https://pytorch.org) based on requirements, ensuring compatibility with the minimal requirements of CryoSieve.
 
 For CUDA version >= 11.8:
 ```
 conda create -n CRYOSIEVE_ENV python=3.10 cupy=12.0 pytorch pytorch-cuda=12.1 -c pytorch -c nvidia -c conda-forge
 ```
-Please note that This command is tailored for CUDA environment version 12.1. For a different CUDA version, adjust `pytorch-cuda` version accordingly.
+Please note that this command is tailored for CUDA environment version 12.1. For a different CUDA version, adjust `pytorch-cuda` version accordingly.
 
 ## Installing CryoSieve
 
@@ -346,3 +346,6 @@ There are several useful remarks:
 
 - A: I successfully executed CryoSieve, but when I tried to import the sieve particles into cryoSPARC to re-estimate their poses, I encountered an error. How can I resolve this?
 - Q: When setting up the `import stack` job in CryoSPARC, ensure that the `particle_data_path` option is correctly configured.
+
+- A: Using the default parameters of CryoSieve, the resolution of the density map reconstructed from pose-restimated retained particles began to deteriorate from the first iteration of CryoSieve. What adjustments should I make?
+- Q: The first option of `cryosieve` that should be customized is `--retention_ratio`. Try increasing or decreasing it. The second option to adjust is `--frequency_end`. Use the resolution obtained from your dataset and try varying around that value.
