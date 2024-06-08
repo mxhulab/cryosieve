@@ -344,8 +344,20 @@ There are several useful remarks:
 
 # FAQ
 
-- A: I successfully executed CryoSieve, but when I tried to import the sieve particles into cryoSPARC to re-estimate their poses, I encountered an error. How can I resolve this?
-- Q: When setting up the `import stack` job in CryoSPARC, ensure that the `particle_data_path` option is correctly configured.
+- Q: I successfully executed CryoSieve, but when I tried to import the sieve particles into CryoSPARC to re-estimate their poses, I encountered an error. How can I resolve this?
+- A: When setting up the `import stack` job in CryoSPARC, ensure that the `particle_data_path` option is correctly configured.
 
-- A: Using the default parameters of CryoSieve, the resolution of the density map reconstructed from pose-restimated retained particles began to deteriorate from the first iteration of CryoSieve. What adjustments should I make?
-- Q: The first option of `cryosieve` that should be customized is `--retention_ratio`. Try increasing or decreasing it. The second option to adjust is `--frequency_end`. Use the resolution obtained from your dataset and try varying around that value.
+- Q: Using the default parameters of CryoSieve, the resolution of the density map reconstructed from pose-restimated retained particles began to deteriorate from the first iteration of CryoSieve. What adjustments should I make?
+- A: The first option of `cryosieve` that should be customized is `--retention_ratio`. Try increasing or decreasing it. The second option to adjust is `--frequency_end`. Use the resolution obtained from your dataset and try varying around that value.
+
+- Q: When I run CryoSieve, I encountered an error like `mkl-service + Intel(R) MKL: MKL_THREADING_LAYER=INTEL is incompatible with libgomp.so.1 library`. How can I fix it?
+- A: It seems there is a conflict between two threading methods (GNU_THREADING and MKL_THREADING) in your system, and they are not compatible with each other. Please try executing the following command before running CryoSieve:
+  ```
+  export MKL_THREADING_LAYER=GNU
+  ```
+
+- Q: When I run CryoSieve, it reports a warning like `setting OMP_NUM_THREADS environment variable for each process to be l in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed.`
+- A: To address this warning and prevent potential system overload, please try executing the following command before running CryoSieve:
+  ```
+  export OMP_NUM_THREADS=1
+  ```
