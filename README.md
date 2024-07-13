@@ -354,7 +354,7 @@ There are several useful remarks:
 - A: The first option of `cryosieve` that should be customized is `--retention_ratio`. Try increasing or decreasing it. The second option to adjust is `--frequency_end`. Use the resolution obtained from your dataset and try varying around that value.
 
 - Q: When I run CryoSieve, I encountered an error like `mkl-service + Intel(R) MKL: MKL_THREADING_LAYER=INTEL is incompatible with libgomp.so.1 library`. How can I fix it?
-- A: It seems there is a conflict between two threading methods (GNU_THREADING and MKL_THREADING) in your system, and they are not compatible with each other. Please try executing the following command before running CryoSieve:
+- A: It seems there is a conflict between two threading methods (GNU_THREADING and MKL_THREADING) in your system, as they are not compatible with each other. Please try executing the following command before running CryoSieve:
   ```
   export MKL_THREADING_LAYER=GNU
   ```
