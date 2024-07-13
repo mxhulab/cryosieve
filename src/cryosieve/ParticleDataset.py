@@ -1,8 +1,10 @@
 import os
 import starfile
 import numpy as np
+import pandas as pd
 from copy import copy
 from torch.utils.data import Dataset
+from typing import Optional
 from .utility import mrcread
 
 class ParticleDataset(Dataset):
@@ -14,7 +16,7 @@ class ParticleDataset(Dataset):
     be loaded until the __getitem__ method is called.
     '''
 
-    def __init__(self, star_path : str, data_dir : str = '', pixel_size : float = 1.):
+    def __init__(self, star_path : str, data_dir : str = '', pixel_size : Optional[float] = None):
         if not os.path.exists(star_path):
             raise FileNotFoundError(f'{star_path} does not exist.')
         star = starfile.read(star_path, always_dict = True)
@@ -25,6 +27,7 @@ class ParticleDataset(Dataset):
         # For supporting starfile>=0.5 in the future.
         if len(star) == 1 and (0 in star or '' in star or 'images' in star):
             self.version = 2
+            self.optics = None
             self.particles = star[0] if 0 in star else star[''] if '' in star else star['images']
 
             # Check keys.
@@ -34,6 +37,8 @@ class ParticleDataset(Dataset):
                         'rlnAmplitudeContrast', 'rlnImageName']:
                 if key not in self.particles:
                     raise ValueError(f'Key {key} missed in star file {star_path}.')
+            if pixel_size is None:
+                raise ValueError('Need pixelsize (--angpix) for star file before RELION version 3.1.')
 
         # >=Relion 3.1
         elif len(star) == 2 and ('optics' in star and 'particles' in star):
@@ -56,78 +61,76 @@ class ParticleDataset(Dataset):
         else:
             raise ValueError('Invalid particle star file.')
 
-        self.indices = np.arange(len(self.particles), dtype = np.int32)
-        self.subsets = self.particles['rlnRandomSubset'].to_numpy().astype(np.int32) \
-                        if 'rlnRandomSubset' in self.particles \
-                        else np.ones(len(self.particles), dtype = np.int32)
+        self._parse_paras()
+
+    def _parse_paras(self):
+        '''
+        Parsing parameters from self.optics, self.particles.
+        '''
+        self.paras = np.empty((len(self.particles), 14), dtype = np.float64)
+
+        # Handling RELION 3.1 format by merging tables.
+        if self.version == 2:
+            particles = self.particles
+        else:
+            try:
+                particles = pd.merge(self.optics, self.particles, left_on = 'rlnOpticsGroup', right_on = 'rlnOpticsGroup', validate = 'one_to_many')
+            except pd.errors.MergeError:
+                raise ValueError('There are multiple optic groups with same index. Check the star file.')
+            if len(particles) != len(self.particles):
+                raise ValueError('There are particles with no corresponding optic group. Check the star file.')
+
+        self.paras[:,  0] = particles['rlnOriginX'] if self.version == 2 else particles['rlnOriginXAngst'] / particles['rlnImagePixelSize']
+        self.paras[:,  1] = particles['rlnOriginY'] if self.version == 2 else particles['rlnOriginYAngst'] / particles['rlnImagePixelSize']
+        psi   = np.radians(particles['rlnAngleRot'])
+        theta = np.radians(particles['rlnAngleTilt'])
+        phi   = np.radians(particles['rlnAnglePsi'])
+        self.paras[:,  2] =  np.cos((phi + psi) / 2) * np.cos(theta / 2)
+        self.paras[:,  3] = -np.sin((phi - psi) / 2) * np.sin(theta / 2)
+        self.paras[:,  4] = -np.cos((phi - psi) / 2) * np.sin(theta / 2)
+        self.paras[:,  5] = -np.sin((phi + psi) / 2) * np.cos(theta / 2)
+        self.paras[:,  6] = particles['rlnVoltage'] * 1e3
+        self.paras[:,  7] = particles['rlnDefocusU']
+        self.paras[:,  8] = particles['rlnDefocusV']
+        self.paras[:,  9] = np.radians(particles['rlnDefocusAngle'])
+        self.paras[:, 10] = particles['rlnSphericalAberration'] * 1e7
+        self.paras[:, 11] = particles['rlnAmplitudeContrast']
+        self.paras[:, 12] = np.radians(particles['rlnPhaseShift']) if 'rlnPhaseShift' in particles else 0.
+        self.paras[:, 13] = self.pixel_size if self.version == 2 else particles['rlnImagePixelSize']
 
     def __len__(self) -> int:
-        return len(self.indices)
+        return len(self.paras)
 
     def __getitem__(self, i : int):
-        assert 0 <= i < len(self.indices)
-        idx = self.indices[i]
-
-        # Common parameters.
-        slc, name, *_ = self.particles.loc[idx, 'rlnImageName'].split('@')
-        psi         = np.radians(self.particles.loc[idx, 'rlnAngleRot'])
-        theta       = np.radians(self.particles.loc[idx, 'rlnAngleTilt'])
-        phi         = np.radians(self.particles.loc[idx, 'rlnAnglePsi'])
-        qw          =  np.cos((phi + psi) / 2) * np.cos(theta / 2)
-        qx          = -np.sin((phi - psi) / 2) * np.sin(theta / 2)
-        qy          = -np.cos((phi - psi) / 2) * np.sin(theta / 2)
-        qz          = -np.sin((phi + psi) / 2) * np.cos(theta / 2)
-        defocusU    = self.particles.loc[idx, 'rlnDefocusU']
-        defocusV    = self.particles.loc[idx, 'rlnDefocusV']
-        astigmatism = np.radians(self.particles.loc[idx, 'rlnDefocusAngle'])
-        phase_shift = np.radians(self.particles.loc[idx, 'rlnPhaseShift']) \
-                    if 'rlnPhaseShift' in self.particles else 0.
-
-        # Different versions.
-        if self.version == 2:
-            dx          = self.particles.loc[idx, 'rlnOriginX']
-            dy          = self.particles.loc[idx, 'rlnOriginY']
-            voltage     = self.particles.loc[idx, 'rlnVoltage'] * 1000
-            Cs          = self.particles.loc[idx, 'rlnSphericalAberration'] * 1e7
-            amplitude   = self.particles.loc[idx, 'rlnAmplitudeContrast']
-            pixel_size  = self.pixel_size
-        else:
-            group       = self.particles.loc[idx, 'rlnOpticsGroup']
-            row         = self.optics.query(f'rlnOpticsGroup == {group}')
-            if len(row) == 0:
-                raise ValueError(f'Optic group {group} does not exist.')
-            elif len(row) > 1:
-                raise ValueError(f'Find multiple optic group {group}.')
-            row         = row.iloc[0]
-            pixel_size  = row['rlnImagePixelSize']
-            dx          = self.particles.loc[idx, 'rlnOriginXAngst'] / pixel_size
-            dy          = self.particles.loc[idx, 'rlnOriginYAngst'] / pixel_size
-            voltage     = row['rlnVoltage'] * 1000
-            Cs          = row['rlnSphericalAberration'] * 1e7
-            amplitude   = row['rlnAmplitudeContrast']
-
-        return mrcread(self.data_dir + name, int(slc) - 1), \
-               np.array([dx, dy, qw, qx, qy, qz, voltage, defocusU, defocusV,
-                         astigmatism, Cs, amplitude, phase_shift, pixel_size], dtype = np.float64)
+        assert 0 <= i < len(self.paras)
+        slc, name, *_ = self.particles.iloc[i]['rlnImageName'].split('@')
+        return mrcread(self.data_dir + name, int(slc) - 1), self.paras[i]
 
     def save(self, output_path : str):
-        if self.version == 2:
-            starfile.write({'images' : self.particles.iloc[self.indices]}, output_path, overwrite = True)
-        else:
-            starfile.write({'optics' : self.optics, 'particles' : self.particles.iloc[self.indices]},
-                           output_path, overwrite = True)
+        data_dict = {'images' : self.particles} if self.version == 2 else \
+                    {'optics' : self.optics, 'particles' : self.particles}
+        starfile.write(data_dict, output_path, overwrite = True)
 
-    def reset(self, subset = None):
-        self.indices = np.arange(len(self.particles), dtype = np.int32) if subset is None else \
-                       np.where(self.subsets == subset)[0]
+    def n_random_subset(self) -> int:
+        return 1 if 'rlnRandomSubset' not in self.particles else \
+            len(self.particles['rlnRandomSubset'].value_counts())
 
-    def subset(self, indices):
+    def get_random_subset(self, i : int):
+        if 'rlnRandomSubset' not in self.particles:
+            raise ValueError('Key rlnRandomSubset missed in star file.')
+        return self.subset(self.particles['rlnRandomSubset'] == i)
+
+    def subset(self, mask):
         sub = copy(self)
-        sub.indices = self.indices[indices]
+        sub.paras = self.paras[mask]
+        sub.particles = self.particles[mask]
         return sub
 
-    def split(self, mask):
-        sub1, sub2 = copy(self), copy(self)
-        sub1.indices = self.indices[mask]
-        sub2.indices = self.indices[~mask]
-        return sub1, sub2
+    def balance(self):
+        if 'rlnRandomSubset' not in self.particles:
+            return
+
+        n = self.particles['rlnRandomSubset'].value_counts().min()
+        self.particles = self.particles.groupby('rlnRandomSubset').sample(n = n)
+        self.particles.sort_index(inplace = True)
+        self._parse_paras()

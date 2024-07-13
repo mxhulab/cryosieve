@@ -1,8 +1,5 @@
 import argparse
-import shutil
 import sys
-import numpy as np
-from pathlib import Path
 
 def parse_argument():
     parser = argparse.ArgumentParser(description = 'CryoSieve: a particle sorting and sieving software for single particle analysis in cryo-EM.')
@@ -17,7 +14,7 @@ def parse_argument():
     parser.add_argument('--frequency_end',        type = float, default  = 3.,    help = 'ending threshold frquency, in Angstrom, 3A by default.')
     parser.add_argument('--retention_ratio',      type = float, default  = 0.8,   help = 'fraction of retained particles in each iteration, 0.8 by default.')
     parser.add_argument('--mask',                 type = str,   required = True,  help = 'mask file path.')
-    parser.add_argument('--balance',              action = 'store_true',          help = 'make remaining particles in different subsets in same size.')
+    parser.add_argument('--balance',              action = 'store_true',          help = 'randomly drop particles to make all subset into the same size.')
     parser.add_argument('--num_gpus',             type = int,   default  = 1,     help = 'number of gpus to execute CryoSieve core program, 1 by default.')
     if len(sys.argv) == 1:
         parser.print_help()
@@ -26,10 +23,18 @@ def parse_argument():
 
 def main():
     args = parse_argument()
+    if args.postprocess_software is not None:
+        print('The `--postprocess_software` will be deprecated soon. CryoSieve will implement its own postprocessing.', file = sys.stderr)
+
     from .utility import check_cupy
     check_cupy()
 
-    # copy the star file to output directory as iteration 0.
+    import numpy as np
+    from pathlib import Path
+    from .ParticleDataset import ParticleDataset
+    from .utility import run_commands
+
+    # prepare.
     src = Path(f'{args.i}')
     dst = Path(f'{args.o}_iter0.star')
     if not src.exists():
@@ -37,13 +42,12 @@ def main():
     elif src.suffix != '.star':
         raise ValueError(f'{args.i} is not a star file.')
     dst.absolute().parent.mkdir(parents = True, exist_ok = True)
-    try:
-        shutil.copyfile(src, dst)
-    except shutil.SameFileError:
-        pass
+
+    dataset = ParticleDataset(src, '', args.angpix)
+    if args.balance: dataset.balance()
+    dataset.save(dst)
 
     # go.
-    from .utility import run_commands
     frequences = 1 / np.linspace(1.0 / args.frequency_start, 1.0 / args.frequency_end, args.num_iters)
     overall_retention_ratio = 1.0
     for i in range(args.num_iters):
@@ -60,7 +64,7 @@ def main():
             run_commands(f'{args.postprocess_software} --mask {args.mask} --i {args.o}_iter{i}_half1.mrc --i2 {args.o}_iter{i}_half2.mrc --o {args.o}_postprocess_iter{i}/iter{i} --angpix {args.angpix} --auto_bfac --autob_lowres 10 >{args.o}_postprocess_iter{i}.txt', f'POSTPROCESS_DONE, ITERATION {i}')
 
         # sieve.
-        run_commands(f'cryosieve-core --i {args.o}_iter{i}.star --o {args.o}_iter{i + 1}.star --angpix {args.angpix} --volume {args.o}_iter{i}_half1.mrc --volume {args.o}_iter{i}_half2.mrc --mask {args.mask} --retention_ratio {args.retention_ratio} --frequency {frequences[i]:.3f} {"--balance" if args.balance else ""} --num_gpus {args.num_gpus} >{args.o}_iter{i}_sieve.txt', f'SIEVE_DONE, ITERATION {i}')
+        run_commands(f'cryosieve-core --i {args.o}_iter{i}.star --o {args.o}_iter{i + 1}.star --angpix {args.angpix} --volume {args.o}_iter{i}_half1.mrc --volume {args.o}_iter{i}_half2.mrc --mask {args.mask} --retention_ratio {args.retention_ratio} --frequency {frequences[i]:.3f} --num_gpus {args.num_gpus} >{args.o}_iter{i}_sieve.txt', f'SIEVE_DONE, ITERATION {i}')
         overall_retention_ratio *= args.retention_ratio
 
     print('EXECUTION IN SUCCESS')

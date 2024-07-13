@@ -49,7 +49,7 @@ The CryoSieve package depends on the following libraries:
 ```
 numpy>=1.18
 mrcfile>=1.2
-starfile>=0.4,<0.5
+starfile>=0.4.1,<0.5
 pandans<2.2
 cupy>=10
 torch>=1.10
@@ -134,7 +134,7 @@ For this tutorial, we'll be using the final particle stack from the [EMPIAR-1123
 To download the final particle stack, navigate to your desired working directory and execute the following command:
 
 ```
-wget -nH -m ftp://ftp.ebi.ac.uk/empiar/world_availability/11233/data/Final_Particle_Stack/
+wget -nH -m -c ftp://ftp.ebi.ac.uk/empiar/world_availability/11233/data/Final_Particle_Stack/
 ```
 
 Upon completion, you'll find a new directory named `XXX/data/Final_Particle_Stack` in your working directory. This directory contains a star file with all particle information and an mrcs file representing the final stack.
@@ -183,8 +183,8 @@ The program `cryosieve-core` is the core particle sieving module.
 
 ```
 $ cryosieve-core -h
-usage: cryosieve-core [-h] --i I --o O [--directory DIRECTORY] --angpix ANGPIX --volume VOLUME [--mask MASK] [--retention_ratio RETENTION_RATIO] --frequency
-                      FREQUENCY [--balance] [--num_gpus NUM_GPUS]
+usage: cryosieve-core [-h] --i I --o O [--directory DIRECTORY] [--angpix ANGPIX] --volume VOLUME [--mask MASK]
+                      --retention_ratio RETENTION_RATIO --frequency FREQUENCY [--num_gpus NUM_GPUS]
 
 CryoSieve core.
 
@@ -201,7 +201,6 @@ options:
                         fraction of retained particles, 0.8 by default.
   --frequency FREQUENCY
                         cut-off highpass frequency.
-  --balance             make retained particles in different subsets in same size.
   --num_gpus NUM_GPUS   number of GPUs to execute the cryosieve program, 1 by default.
 ```
 
@@ -254,8 +253,9 @@ The program `cryosieve-csrefine` is designed to automatically and sequentially e
 
 ```
 $ cryosieve-csrefine -h
-usage: cryosieve-csrefine [-h] [--i I [I ...]] [--directory DIRECTORY] [--o O] [--sym SYM] [--ref REF] [--repeat REPEAT] --user USER
-                          --project PROJECT --workspace WORKSPACE --lane LANE [--nu] [--resplit] [--workers WORKERS]
+usage: cryosieve-csrefine [-h] [--i I [I ...]] [--directory DIRECTORY] [--o O] [--sym SYM] [--ref REF]
+                          [--ini_high INI_HIGH] [--repeat REPEAT] --user USER --project PROJECT --workspace WORKSPACE
+                          --lane LANE [--nu] [--resplit] [--workers WORKERS]
 
 cryosieve-csrefine: automatic SPA 3D-refinement by calling CryoSPARC.
 
@@ -267,6 +267,7 @@ options:
   --o O                 output summary csv file path. If not provided, no summary is written.
   --sym SYM             molecular symmetry, C1 by default.
   --ref REF             initial reference model. If not provided, CryoSPARC's ab-initio job will be used.
+  --ini_high INI_HIGH   initial resolution.
   --repeat REPEAT       number of trials, 1 by default.
   --user USER           e-mail address of the user of CryoSPARC.
   --project PROJECT     project UID in CryoSPARC.
@@ -296,9 +297,10 @@ The program `cryosieve-csrhbfactor` is designed to automatically determine Rosen
 
 ```
 $ cryosieve-csrhbfactor -h
-usage: cryosieve-csrhbfactor [-h] [--i I [I ...]] [--directory DIRECTORY] --o O [--sym SYM] [--ref REF] [--voltage VOLTAGE]
-                             [--repeat REPEAT] [--halves HALVES] --user USER --project PROJECT --workspace WORKSPACE --lane LANE [--nu]
-                             [--resplit] [--workers WORKERS]
+usage: cryosieve-csrhbfactor [-h] [--i I [I ...]] [--directory DIRECTORY] --o O [--sym SYM] [--ref REF]
+                             [--ini_high INI_HIGH] [--voltage VOLTAGE] [--repeat REPEAT] [--halves HALVES] --user USER
+                             --project PROJECT --workspace WORKSPACE --lane LANE [--nu] [--resplit]
+                             [--workers WORKERS]
 
 cryosieve-csrhbfactor: automatic Rosenthal-Henderson B-factor estimation by calling CryoSPARC.
 
@@ -310,6 +312,7 @@ options:
   --o O                 output summary csv file path.
   --sym SYM             molecular symmetry, C1 by default.
   --ref REF             initial reference model. If not provided, CryoSPARC's ab-initio job will be used.
+  --ini_high INI_HIGH   initial resolution.
   --voltage VOLTAGE     acceleration voltage (kV), 300 by default. Only 200 and 300 supported!
   --repeat REPEAT       number of trials, 1 by default.
   --halves HALVES       number of times executing halvings, 4 by default.

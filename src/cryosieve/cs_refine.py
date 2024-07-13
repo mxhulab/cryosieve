@@ -6,7 +6,7 @@ import subprocess
 import sys
 from itertools import product
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor, Future
+from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 from time import sleep
 from random import uniform
@@ -18,6 +18,7 @@ def parse_argument():
     parser.add_argument('--o',         type = str,                  help = 'output summary csv file path. If not provided, no summary is written.')
     parser.add_argument('--sym',       type = str, default  = 'C1', help = 'molecular symmetry, C1 by default.')
     parser.add_argument('--ref',       type = str,                  help = 'initial reference model. If not provided, CryoSPARC\'s ab-initio job will be used.')
+    parser.add_argument('--ini_high',  type = float,                help = 'initial resolution.')
     parser.add_argument('--repeat',    type = int, default  = 1,    help = 'number of trials, 1 by default.')
     parser.add_argument('--user',      type = str, required = True, help = 'e-mail address of the user of CryoSPARC.')
     parser.add_argument('--project',   type = str, required = True, help = 'project UID in CryoSPARC.')
@@ -44,7 +45,7 @@ def load_cryosparc(args):
     lane = args.lane
     lock = Lock()
 
-def enqueue_and_wait(**kwargs):
+def enqueue_and_wait(local_lane, **kwargs):
     with lock:
         job_id = client.make_job(
             user_id = user_id,
@@ -52,7 +53,7 @@ def enqueue_and_wait(**kwargs):
             workspace_uid = workspace_uid,
             **kwargs
         )
-        client.enqueue_job(project_uid, job_id, lane, user_id)
+        client.enqueue_job(project_uid, job_id, local_lane, user_id)
 
     while True:
         sleep(uniform(30, 60))
@@ -64,6 +65,7 @@ def enqueue_and_wait(**kwargs):
 
 def refine(particle_meta_path, particle_blob_dir):
     import_job_id = enqueue_and_wait(
+        None,
         job_type = 'import_particles',
         params = {
             'particle_meta_path' : particle_meta_path,
@@ -73,18 +75,21 @@ def refine(particle_meta_path, particle_blob_dir):
 
     if not import_ref_job_id:
         abinit_job_id = enqueue_and_wait(
+            lane,
             job_type = 'homo_abinit',
             input_group_connects = {
                 'particles': f'{import_job_id}.imported_particles'
             }
         )
 
+    params = {}
+    params['refine_symmetry'] = args.sym
+    params['refine_gs_resplit'] = args.resplit
+    if args.ini_high is not None: params['refine_res_init'] = args.ini_high
     refine_job_id = enqueue_and_wait(
+        lane,
         job_type = 'nonuniform_refine_new' if args.nu else 'homo_refine_new',
-        params = {
-            'refine_symmetry' : args.sym,
-            'refine_gs_resplit' : args.resplit
-        },
+        params = params,
         input_group_connects = {
             'particles' : f'{import_job_id}.imported_particles',
             'volume' : f'{import_ref_job_id}.imported_volume_1' if import_ref_job_id else f'{abinit_job_id}.volume_class_0'
@@ -114,6 +119,7 @@ def main():
               (f'--o "{args.o}" ' if args.o is not None else '') + \
               f'--sym {args.sym} ' + \
               (f'--ref "{args.ref}" ' if args.ref is not None else '') + \
+              (f'--ini_high {args.ini_high} ' if args.ini_high is not None else '') + \
               f'--repeat {args.repeat} ' + \
               f'--user {args.user} ' + \
               f'--project {args.project} ' + \
@@ -158,6 +164,7 @@ if __name__ == '__main__':
         if not Path(args.ref).is_file():
             raise FileNotFoundError(f'"{args.ref}" not exists.')
         import_ref_job_id = enqueue_and_wait(
+            None,
             job_type = 'import_volumes',
             params = {
                 'volume_blob_path' : str(Path(args.ref).absolute())

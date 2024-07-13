@@ -16,6 +16,7 @@ def parse_argument():
     parser.add_argument('--o',         type = str, required = True, help = 'output summary csv file path.')
     parser.add_argument('--sym',       type = str, default  = 'C1', help = 'molecular symmetry, C1 by default.')
     parser.add_argument('--ref',       type = str,                  help = 'initial reference model. If not provided, CryoSPARC\'s ab-initio job will be used.')
+    parser.add_argument('--ini_high',  type = float,                help = 'initial resolution.')
     parser.add_argument('--voltage',   type = int, default  = 300,  help = 'acceleration voltage (kV), 300 by default. Only 200 and 300 supported!')
     parser.add_argument('--repeat',    type = int, default  = 1,    help = 'number of trials, 1 by default.')
     parser.add_argument('--halves',    type = int, default  = 4,    help = 'number of times executing halvings, 4 by default.')
@@ -87,6 +88,7 @@ def main():
               f'--o {tmp_dir.name}/summary.csv ' + \
               f'--sym {args.sym} ' + \
               (f'--ref "{args.ref}" ' if args.ref is not None else '') + \
+              (f'--ini_high {args.ini_high} ' if args.ini_high is not None else '') + \
               f'--user {args.user} ' + \
               f'--project {args.project} ' + \
               f'--workspace {args.workspace} ' + \
