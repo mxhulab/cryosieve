@@ -38,4 +38,6 @@ def sieve(dataset, volume, threshold, number, rank, world_size):
     if world_size > 1: dist.reduce(g, dst = 0)
     g = g.to('cpu').numpy()
     indices = np.argsort(g)
-    return dataset.subset(indices[:number])
+    mask = np.zeros(m, dtype = np.bool_)
+    mask[indices[:number]] = True
+    return dataset.subset(mask)

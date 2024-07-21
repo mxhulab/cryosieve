@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cryosieve"
-version = "1.2.5"
+version = "1.2.6"
 authors = [
     { name="Jianying Zhu", email="zhu-jy20@mails.tsinghua.edu.cn" },
     { name="Qi Zhang", email="q-zhang20@mails.tsinghua.edu.cn" },
-    { name="Hui Zhang", email="zhanghui198@mails.ucas.ac.cn" },
+    { name="Hui Zhang", email="zhanghui23@mails.tsinghua.edu.cn" },
     { name="Zuoqiang Shi", email="zqshi@tsinghua.edu.cn" },
-    { name="Mingxu Hu", email="humingxu@mail.tsinghua.edu.cn" },
+    { name="Mingxu Hu", email="humingxu@smart.org.cn" },
     { name="Chenglong Bao", email="clbao@tsinghua.edu.cn" },
 ]
 description = "CryoSieve: a particle sorting and sieving algorithm for single particle analysis in cryo-EM"
@@ -20,7 +20,7 @@ requires-python = ">=3.7"
 dependencies = [
     "numpy>=1.18",
     "mrcfile>=1.2",
-    "starfile>=0.4,<0.5",
+    "starfile>=0.4.1,<0.5",
     "pandas<2.2",
     "cupy>=10",
     "torch>=1.10"
