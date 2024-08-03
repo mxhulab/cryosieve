@@ -255,7 +255,8 @@ The program `cryosieve-csrefine` is designed to automatically and sequentially e
 $ cryosieve-csrefine -h
 usage: cryosieve-csrefine [-h] [--i I [I ...]] [--directory DIRECTORY] [--o O] [--sym SYM] [--ref REF]
                           [--ini_high INI_HIGH] [--repeat REPEAT] --user USER --project PROJECT --workspace WORKSPACE
-                          --lane LANE [--nu] [--resplit] [--workers WORKERS]
+                          --lane LANE [--nu] [--local] [--resplit] [--workers WORKERS]
+                          [--min_angular_step MIN_ANGULAR_STEP]
 
 cryosieve-csrefine: automatic SPA 3D-refinement by calling CryoSPARC.
 
@@ -275,6 +276,9 @@ options:
                         workspace UID in CryoSPARC.
   --lane LANE           lane selected for computing in CryoSPARC.
   --nu                  use non-uniform refinement.
+  --local               use local refinement after homogeneous / non-uniform refinement.
+  --min_angular_step MIN_ANGULAR_STEP
+                        minimum angular step for local refinement.
   --resplit             force re-do GS split.
   --workers WORKERS     number of workers to run CryoSPARC job, unlimited by default.
 ```
