@@ -337,6 +337,9 @@ There are several useful remarks:
 
 # Release Note
 
+* Version 1.2.8:
+  - Fix some bugs and improve performance.
+  - Add several arguments in `cryosieve-csrefine` and `cryosieve-csrhbfactor`.
 * Version 1.2.5:
   - Add two new programs: `cryosieve-csrefine` and `cryosieve-csrhbfactor`.
   - Introduce a simplified command for preparing the Conda environment.
