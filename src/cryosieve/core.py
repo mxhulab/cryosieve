@@ -89,7 +89,7 @@ def core():
         time1 = time()
         print(f'[Processes completed successfully in {time1 - time0:.2f}s.][SINGLE-GPU CRYOSIEVE-CORE DONE.]')
     else:
-        core_args = f'--i {args.i} --o {args.o} {f"--directory {args.directory}" if args.directory else ""} --angpix {args.angpix} {" ".join([f"--volume {volume}" for volume in args.volume])} {f"--mask {args.mask}" if args.mask is not None else ""} --retention_ratio {args.retention_ratio} --frequency {args.frequency} {"--balance" if args.balance else ""}'
+        core_args = f'--i {args.i} --o {args.o} {f"--directory {args.directory}" if args.directory else ""} --angpix {args.angpix} {" ".join([f"--volume {volume}" for volume in args.volume])} {f"--mask {args.mask}" if args.mask is not None else ""} --retention_ratio {args.retention_ratio} --frequency {args.frequency}'
         run_commands(f'torchrun --standalone --nnodes=1 --nproc_per_node={args.num_gpus} -m cryosieve.core ' + core_args, 'MULTI-GPU CRYOSIEVE-CORE DONE.')
 
 if __name__ == '__main__':

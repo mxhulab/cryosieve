@@ -1,9 +1,9 @@
 package:
   name: cryosieve
-  version: 1.2.7
+  version: 1.2.8
 
 source:
-  path: cryosieve-1.2.7
+  path: cryosieve-1.2.8
 
 build:
   noarch: python
