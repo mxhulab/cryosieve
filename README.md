@@ -57,7 +57,7 @@ torch>=1.10
 
 ## Preparation of CUDA Environment
 
-We recommend installing CuPy and PyTorch initially, as their installation largely depends on the CUDA environment. Please note, PyTorch should be CUDA-capable. To streamline this process, we suggest preparing a conda environment with the following commands.
+We recommend installing CuPy and PyTorch initially, as their installation largely depends on the CUDA environment. Please note, PyTorch should be CUDA-capable. To streamline this process, we suggest preparing a Conda environment with the following commands.
 
 For CUDA version <= 11.7:
 ```
@@ -65,11 +65,22 @@ conda create -n CRYOSIEVE_ENV python=3.8 cudatoolkit=10.2 cupy=10.0 pytorch=1.10
 ```
 Please note that this command is tailored for CUDA version 10.2. To accommodate a different CUDA version, adjust the `cudatoolkit` version accordingly. Modify the versions of Python, [CuPy](https://cupy.dev), and [PyTorch](https://pytorch.org) based on requirements, ensuring compatibility with the minimal requirements of CryoSieve.
 
-For CUDA version >= 11.8:
+For CUDA version >= 12.0:
 ```
 conda create -n CRYOSIEVE_ENV python=3.10 cupy=12.0 pytorch pytorch-cuda=12.1 -c pytorch -c nvidia -c conda-forge
 ```
 Please note that this command is tailored for CUDA environment version 12.1. For a different CUDA version, adjust `pytorch-cuda` version accordingly.
+
+For CUDA versions 11.8, or errors occured during installing CuPy with Conda, follow these steps:
+1. Create a Conda environment with PyTorch:
+```
+conda create -n CRYOSIEVE_ENV python=3.10 pytorch pytorch-cuda=11.8 -c pytorch -c nvidia -c conda-forge
+```
+2. Activate this environment and install CuPy and other Prerequisites packages via `pip`:
+```
+conda activate CRYOSIEVE_ENV
+pip install numpy==1.24.3 cupy-cuda11x mrcfile==1.5.0 starfile==0.4.12 pandas==2.1.4
+```
 
 ## Installing CryoSieve
 
@@ -87,6 +98,11 @@ pip install cryosieve
 Alternatively, to install CryoSieve using `conda`, execute the following command:
 ```
 conda install -c mxhulab cryosieve
+```
+
+For CUDA versions 11.8, all dependencies of CryoSieve have already been installed and CryoSieve needs to be installed without checking any dependencies:
+```
+pip install --no-deps cryosieve
 ```
 
 ## Verifying Installation

@@ -6,6 +6,7 @@ import sys
 import tempfile
 import numpy as np
 import pandas as pd
+from pathlib import Path
 from scipy.optimize import curve_fit
 from .cs_refine import parse_meta_paths
 
@@ -53,8 +54,13 @@ def main():
         N = 60
     else:
         raise ValueError('Invalid molecular symmetry.')
-    csvfile = open(args.o, 'w')
-    csvwriter = csv.writer(csvfile)
+    csvpath = Path(args.o).absolute()
+    if csvpath.suffix != '.csv':
+        raise ValueError('output summary must be a .csv file.')
+    if not csvpath.exists():
+        csvpath.parent.mkdir(parents = True, exist_ok = True)
+        csvpath.touch()
+    rawpath = csvpath.parent.joinpath(csvpath.stem + '_raw.csv')
 
     # For each star file, take random halves and save it to a temporary file.
     tmp_dir = tempfile.TemporaryDirectory()
@@ -85,7 +91,7 @@ def main():
     # Call cryosieve-csrefine to estimate resolutions.
     command = f'cryosieve-csrefine --i {tmp_dir.name}/list.txt ' + \
               (f'--directory "{args.directory}" ' if args.directory else '') + \
-              f'--o {tmp_dir.name}/summary.csv ' + \
+              f'--o {str(rawpath)} ' + \
               f'--sym {args.sym} ' + \
               (f'--ref "{args.ref}" ' if args.ref is not None else '') + \
               (f'--ini_high {args.ini_high} ' if args.ini_high is not None else '') + \
@@ -101,16 +107,17 @@ def main():
         raise RuntimeError('Error in running cryosieve-csrefine.')
 
     # Fit RH-curve.
-    data = pd.read_csv(f'{tmp_dir.name}/summary.csv')
+    data = pd.read_csv(str(rawpath))
     num_points = args.repeat * (args.halves + 1)
     rh_bfactor_curve = lambda x, a : np.log(1437.5695 if args.voltage else 1831.7256) + a / (2 * x ** 2) - np.log(x)
 
     # Save results.
-    csvwriter.writerow(['filename', 'RH-b-factor (A^2)'])
-    for i, meta_path in enumerate(particle_meta_paths):
-        i_slice = slice(i * num_points, (i + 1) * num_points)
-        lognum_particles = np.log(N * data.iloc[i_slice]['number of particles'])
-        resolutions = data.iloc[i_slice]['resolution (A)']
-        rh_bfactor = -curve_fit(rh_bfactor_curve, resolutions, lognum_particles)[0][0]
-        csvwriter.writerow([meta_path, rh_bfactor])
-    csvfile.close()
+    with open(csvpath, 'w') as csvfile:
+        csvwriter = csv.writer(csvfile)
+        csvwriter.writerow(['filename', 'resolution (A)', 'RH-b-factor (A^2)'])
+        for i, meta_path in enumerate(particle_meta_paths):
+            lognum_particles = np.log(N * data.iloc[i * num_points : (i + 1) * num_points]['number of particles'])
+            resolutions = data.iloc[i * num_points : (i + 1) * num_points]['resolution (A)']
+            rh_bfactor = -curve_fit(rh_bfactor_curve, resolutions, lognum_particles)[0][0]
+            resolution = resolutions[::(args.halves + 1)].median()
+            csvwriter.writerow([meta_path, resolution, rh_bfactor])
