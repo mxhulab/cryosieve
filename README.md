@@ -67,9 +67,9 @@ Please note that this command is tailored for CUDA version 10.2. To accommodate 
 
 For CUDA version >= 12.0:
 ```
-conda create -n CRYOSIEVE_ENV python=3.10 cupy=12.0 pytorch pytorch-cuda=12.1 -c pytorch -c nvidia -c conda-forge
+conda create -n CRYOSIEVE_ENV python=3.10 cupy=12.0 pytorch=2.2.0 pytorch-cuda=12.1 cuda-version=12.1 -c pytorch -c nvidia -c conda-forge
 ```
-Please note that this command is tailored for CUDA environment version 12.1. For a different CUDA version, adjust `pytorch-cuda` version accordingly.
+Please note that this command is tailored for CUDA environment version 12.1. For a different CUDA version, adjust `pytorch-cuda` and `cuda-version` accordingly.
 
 For CUDA versions 11.8, or errors occured during installing CuPy with Conda, follow these steps:
 1. Create a Conda environment with PyTorch:
