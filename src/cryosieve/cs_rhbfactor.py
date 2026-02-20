@@ -109,7 +109,7 @@ def main():
     # Fit RH-curve.
     data = pd.read_csv(str(rawpath))
     num_points = args.repeat * (args.halves + 1)
-    rh_bfactor_curve = lambda x, a : np.log(1437.5695 if args.voltage else 1831.7256) + a / (2 * x ** 2) - np.log(x)
+    rh_bfactor_curve = lambda x, a : np.log(1437.5695 if args.voltage == 300 else 1831.7256) + a / (2 * x ** 2) - np.log(x)
 
     # Save results.
     with open(csvpath, 'w') as csvfile:
