@@ -1,4 +1,4 @@
-__version__ = "1.3.0.beta"
+__version__ = "1.3.0"
 
 import logging
 import logging.config
