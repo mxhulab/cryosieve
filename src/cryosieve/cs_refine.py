@@ -12,23 +12,23 @@ from time import sleep
 from random import uniform
 
 def parse_argument():
-    parser = argparse.ArgumentParser(description = 'cryosieve-csrefine: automatic SPA 3D-refinement by calling CryoSPARC.')
-    parser.add_argument('--i',         type = str, nargs    = '+',  help = 'input star file(s) or txt file(s) containing a list of star files.')
-    parser.add_argument('--directory', type = str, default  = '',   help = 'directory of particles, empty (current directory) by default.')
-    parser.add_argument('--o',         type = str,                  help = 'output summary csv file path. If not provided, no summary is written.')
-    parser.add_argument('--sym',       type = str, default  = 'C1', help = 'molecular symmetry, C1 by default.')
-    parser.add_argument('--ref',       type = str,                  help = 'initial reference model. If not provided, CryoSPARC\'s ab-initio job will be used.')
-    parser.add_argument('--ini_high',  type = float,                help = 'initial resolution.')
-    parser.add_argument('--repeat',    type = int, default  = 1,    help = 'number of trials, 1 by default.')
-    parser.add_argument('--user',      type = str, required = True, help = 'e-mail address of the user of CryoSPARC.')
-    parser.add_argument('--project',   type = str, required = True, help = 'project UID in CryoSPARC.')
-    parser.add_argument('--workspace', type = str, required = True, help = 'workspace UID in CryoSPARC.')
-    parser.add_argument('--lane',      type = str, required = True, help = 'lane selected for computing in CryoSPARC.')
-    parser.add_argument('--nu',        action = 'store_true',       help = 'use non-uniform refinement.')
-    parser.add_argument('--local',     action = 'store_true',       help = 'use local refinement after homogeneous / non-uniform refinement.')
-    parser.add_argument('--min_angular_step', type = float, default = 0.01, help = 'minimum angular step for local refinement.')
-    parser.add_argument('--resplit',   action = 'store_true',       help = 'force re-do GS split.')
-    parser.add_argument('--workers',   type = int,                  help = 'number of workers to run CryoSPARC job, unlimited by default.')
+    parser = argparse.ArgumentParser(description = 'cryosieve-csrefine: automatic SPA 3D-refinement by calling CryoSPARC')
+    parser.add_argument('--i',         type = str, nargs    = '+',  help = 'input star file(s) or txt file(s) containing a list of star files')
+    parser.add_argument('--directory', type = str, default  = '',   help = 'directory of particles, empty (current directory) by default')
+    parser.add_argument('--o',         type = str,                  help = 'output summary csv file path. If not provided, no summary is written')
+    parser.add_argument('--sym',       type = str, default  = 'C1', help = 'molecular symmetry, C1 by default')
+    parser.add_argument('--ref',       type = str,                  help = 'initial reference model. If not provided, CryoSPARC\'s ab-initio job will be used')
+    parser.add_argument('--ini_high',  type = float,                help = 'initial resolution')
+    parser.add_argument('--repeat',    type = int, default  = 1,    help = 'number of trials, 1 by default')
+    parser.add_argument('--user',      type = str, required = True, help = 'e-mail address of the user of CryoSPARC')
+    parser.add_argument('--project',   type = str, required = True, help = 'project UID in CryoSPARC')
+    parser.add_argument('--workspace', type = str, required = True, help = 'workspace UID in CryoSPARC')
+    parser.add_argument('--lane',      type = str, required = True, help = 'lane selected for computing in CryoSPARC')
+    parser.add_argument('--nu',        action = 'store_true',       help = 'use non-uniform refinement')
+    parser.add_argument('--local',     action = 'store_true',       help = 'use local refinement after homogeneous / non-uniform refinement')
+    parser.add_argument('--min_angular_step', type = float, default = 0.01, help = 'minimum angular step for local refinement')
+    parser.add_argument('--resplit',   action = 'store_true',       help = 'force re-do GS split')
+    parser.add_argument('--workers',   type = int,                  help = 'number of workers to run CryoSPARC job, unlimited by default')
     if len(sys.argv) == 1:
         parser.print_help()
         exit()
@@ -63,7 +63,7 @@ def enqueue_and_wait(local_lane, **kwargs):
         if job_status == 'completed':
             return job_id
         elif job_status in ['failed', 'killed']:
-            raise RuntimeError(f'Job {job_id} is {job_status}.')
+            raise RuntimeError(f'Job {job_id} is {job_status}')
 
 def import_particles(particle_meta_path):
     import_job_id = enqueue_and_wait(
@@ -141,7 +141,7 @@ def check_results(results, info = None):
     if info is not None:
         print(info, results)
     if any(result is None for result in results):
-        raise RuntimeError('Error occurred during execution.')
+        raise RuntimeError('Error occurred during execution')
 
 def main():
     args = parse_argument()
@@ -175,10 +175,10 @@ def parse_meta_paths(paths):
             for line in lines:
                 meta_path = Path(line.strip())
                 if meta_path.suffix != '.star':
-                    raise RuntimeError(f'{meta_path} is not a star file.')
+                    raise RuntimeError(f'{meta_path} is not a star file')
                 particle_meta_paths.append(str(meta_path.absolute()))
         else:
-            raise RuntimeError(f'"{path}" is not a star or txt file.')
+            raise RuntimeError(f'"{path}" is not a star or txt file')
     return particle_meta_paths
 
 if __name__ == '__main__':
@@ -188,10 +188,10 @@ if __name__ == '__main__':
     # Check args.
     particle_meta_paths = parse_meta_paths(args.i)
     if not Path(args.directory).is_dir():
-        raise FileNotFoundError(f'"{args.directory}" is not a directory.')
+        raise FileNotFoundError(f'"{args.directory}" is not a directory')
     if args.ref is not None:
         if not Path(args.ref).is_file():
-            raise FileNotFoundError(f'"{args.ref}" does not exist.')
+            raise FileNotFoundError(f'"{args.ref}" does not exist')
 
     # Setup.
     pool = ThreadPoolExecutor() if args.workers is None else ThreadPoolExecutor(max_workers = args.workers)
