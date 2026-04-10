@@ -1,43 +1,50 @@
 import mrcfile
 import subprocess
 import numpy as np
-try:
-    import cupy as cp
-except:
-    pass
 from time import time
-from torch.utils.dlpack import to_dlpack, from_dlpack
+from typing import Optional
+from . import logger
 
 def check_cupy():
     try:
-        import cupy
+        import cupy as cp
     except ModuleNotFoundError:
-        print('[ERROR] CuPy module not found.')
+        logger.error('cannot find CuPy module')
         exit(1)
     except ImportError:
-        print('[ERROR] Error occured when importing CuPy. Please check your CUDA environment or GPU card.')
+        logger.error('cannot import CuPy module, please check your CUDA environment or GPU card')
         exit(1)
 
-def cupy_to_torch(x):
-    return from_dlpack(x.toDlpack())
+def mrcread(fpath, i_slc : Optional[int] = None, cached_mrc_handles : Optional[dict] = None) -> np.memmap:
+    if cached_mrc_handles is not None and fpath in cached_mrc_handles:
+        mrc = cached_mrc_handles[fpath]
+    else:
+        mrc = mrcfile.mmap(fpath, permissive = True, mode = 'r')
 
-def torch_to_cupy(x):
-    return cp.fromDlpack(to_dlpack(x))
+    if i_slc is None:
+        data = mrc.data
+    elif mrc.data.ndim == 2:
+        logger.warning(f"{str(fpath)} is an image, rendering it as a stack of 1 image")
+        data = mrc.data
+    else:
+        data = mrc.data[i_slc]
 
-def mrcread(fpath : str, iSlc = None):
-    with mrcfile.mmap(fpath, permissive = True, mode = 'r') as mrc:
-        data = mrc.data if iSlc is None or mrc.data.ndim == 2 else mrc.data[iSlc]
-        return np.array(data, dtype = np.float64)
+    if cached_mrc_handles is not None:
+        cached_mrc_handles[fpath] = mrc
+    else:
+        mrc.close()
 
-def run_commands(commands, msg = '', stdout = None):
+    return data
+
+def run_commands(commands, jobname = '', stdout = None, cwd = None):
     time0 = time()
     if isinstance(commands, str): commands = [commands]
-    processes = [subprocess.Popen(command, shell = True, stdout = stdout) for command in commands]
+    processes = [subprocess.Popen(command, shell = True, stdout = stdout, cwd = cwd) for command in commands]
     for process in processes: process.wait()
     time1 = time()
     if all(process.returncode == 0 for process in processes):
-        print(f'[Subprocesses completed successfully in {time1 - time0:.2f}s.][{msg}]')
+        logger.info(f'Execute {jobname} successfully in {time1 - time0:.2f}s')
     else:
-        print(f'[Subprocesses reported an error.',
-              f'Return code: {[process.returncode for process in processes]}.][{msg}]')
-        exit()
+        returncodes = [process.returncode for process in processes]
+        logger.warning(f'Execute {jobname} ununsuccessfully! Return code(s): {returncodes}')
+        exit(max(returncodes))

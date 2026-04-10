@@ -176,13 +176,15 @@ cryosieve --reconstruct_software relion_reconstruct --postprocess_software relio
 
 For a detailed explanation of each `cryosieve` option, please refer to the following section [Options/Arguments of `cryosieve`](#cryosieve).
 
-The entire process may take over an hour, depending on your system resources. Multiple result files will be generated and saved in the `output/` directory. For instance, the `_iter{n}.star` file contains particles that remain after the n-th sieving iteration, and the `_postprocess_iter{n}` folder houses the postprocessing result after the n-th iteration.
+The entire process may take over an hour, depending on your system resources. Multiple result files will be generated and saved in the `output` directory. For instance, `output/iter{n}.star` contains particles that remain after the n-th sieving iteration, and `output/postprocess_iter{n}` folder houses the postprocessing result after the n-th iteration.
+
+**Note.** CryoSieve v1.3.0 and later behave slightly differently from earlier versions, but the results remain largely consistent.
 
 ### [Recommended] Re-estimate poses
 
 The objective of re-estimating poses is to prevent the unintentional transfer of information from the discarded particles to those that are retained. This process of re-estimating poses with CryoSPARC can be performed manually or automated using a Python module. We provide a Python script named `cryosieve-csrefine` in this repository for this purpose.
 
-For manually re-estimating poses with CryoSPARC, particles must be imported using CryoSPARC’s `import particle stack` job. This importation is from the `_iter{n}.star` file, which contains particles remaining after the n-th sieving iteration. Subsequently, the process involves conducting sequential `ab-initio` jobs, followed by either `homogeneous refinement` or `non-uniform refinement` jobs.
+For manually re-estimating poses with CryoSPARC, particles must be imported using CryoSPARC’s `import particle stack` job. This importation is from the `iter{n}.star` file, which contains particles remaining after the n-th sieving iteration. Subsequently, the process involves conducting sequential `ab-initio` jobs, followed by either `homogeneous refinement` or `non-uniform refinement` jobs.
 
 Alternatively, users can utilize the `cryosieve-csrefine` command, available in this repository, to streamline the labor-intensive manual operations in CryoSPARC. This script automates the sequential execution of `import particle stack`, `ab-initio`, `homogenous refinement` or `non-uniform refinement` jobs for each input particle stack. Additionally, it generates a summary of resolutions and B-factors. For a detailed explanation of each option available in `cryosieve-csrefine`, please refer to the following section [Options/Arguments of `cryosieve-csrefine`](#cryosieve-csrefine).
 
@@ -199,25 +201,25 @@ The program `cryosieve-core` is the core particle sieving module.
 
 ```
 $ cryosieve-core -h
-usage: cryosieve-core [-h] --i I --o O [--directory DIRECTORY] [--angpix ANGPIX] --volume VOLUME [--mask MASK]
-                      --retention_ratio RETENTION_RATIO --frequency FREQUENCY [--num_gpus NUM_GPUS]
+usage: cryosieve-core [-h] --i I --o O [--directory DIRECTORY] [--angpix ANGPIX] --volume VOLUME [--mask MASK] --retention_ratio RETENTION_RATIO --frequency
+                      FREQUENCY [--num_gpus NUM_GPUS]
 
-CryoSieve core.
+CryoSieve core
 
 options:
   -h, --help            show this help message and exit
-  --i I                 input star file path.
-  --o O                 output star file path.
+  --i I                 input star file path
+  --o O                 output star file path
   --directory DIRECTORY
-                        directory of particles, empty (current directory) by default.
-  --angpix ANGPIX       pixelsize in Angstrom.
-  --volume VOLUME       list of volume file paths.
-  --mask MASK           mask file path.
+                        directory of particles
+  --angpix ANGPIX       pixelsize in Angstrom
+  --volume VOLUME       list of volume file paths
+  --mask MASK           mask file path
   --retention_ratio RETENTION_RATIO
-                        fraction of retained particles, 0.8 by default.
+                        fraction of retained particles
   --frequency FREQUENCY
-                        cut-off highpass frequency.
-  --num_gpus NUM_GPUS   number of GPUs to execute the cryosieve program, 1 by default.
+                        cut-off highpass frequency
+  --num_gpus NUM_GPUS   number of GPUs to execute the cryosieve program, 1 by default
 ```
 
 <a name="cryosieve"></a>
@@ -227,38 +229,40 @@ The program `cryosieve` is an integreted program iteratively calling RELION and 
 
 ```
 $ cryosieve -h
-usage: cryosieve [-h] --reconstruct_software RECONSTRUCT_SOFTWARE [--postprocess_software POSTPROCESS_SOFTWARE] --i I --o O --angpix ANGPIX [--sym SYM]
-                 [--num_iters NUM_ITERS] [--frequency_start FREQUENCY_START] [--frequency_end FREQUENCY_END] [--retention_ratio RETENTION_RATIO] --mask MASK
-                 [--balance] [--num_gpus NUM_GPUS]
+usage: cryosieve [-h] --reconstruct_software RECONSTRUCT_SOFTWARE [--postprocess_software POSTPROCESS_SOFTWARE] --i I --o O [--directory DIRECTORY]
+                 [--angpix ANGPIX] [--sym SYM] [--num_iters NUM_ITERS] [--frequency_start FREQUENCY_START] [--frequency_end FREQUENCY_END]
+                 [--retention_ratio RETENTION_RATIO] --mask MASK [--balance] [--num_gpus NUM_GPUS]
 
-CryoSieve: a particle sorting and sieving software for single particle analysis in cryo-EM.
+CryoSieve: a particle sorting and sieving software for single particle analysis in cryo-EM
 
 options:
   -h, --help            show this help message and exit
   --reconstruct_software RECONSTRUCT_SOFTWARE
-                        command for reconstruction.
+                        command for reconstruction
   --postprocess_software POSTPROCESS_SOFTWARE
-                        command for postprocessing.
-  --i I                 input star file path.
-  --o O                 output path prefix.
-  --angpix ANGPIX       pixelsize in Angstrom.
-  --sym SYM             molecular symmetry, C1 by default.
+                        command for postprocessing
+  --i I                 input star file path
+  --o O                 output directory
+  --directory DIRECTORY
+                        directory of particles
+  --angpix ANGPIX       pixelsize in Angstrom
+  --sym SYM             molecular symmetry, C1 by default
   --num_iters NUM_ITERS
-                        number of iterations for applying CryoSieve, 10 by default.
+                        number of iterations for applying CryoSieve, 10 by default
   --frequency_start FREQUENCY_START
-                        starting threshold frquency, in Angstrom, 50A by default.
+                        starting threshold frquency, in Angstrom, 50 by default
   --frequency_end FREQUENCY_END
-                        ending threshold frquency, in Angstrom, 3A by default.
+                        ending threshold frquency, in Angstrom, 3 by default
   --retention_ratio RETENTION_RATIO
-                        fraction of retained particles in each iteration, 0.8 by default.
-  --mask MASK           mask file path.
-  --balance             make remaining particles in different subsets in same size.
-  --num_gpus NUM_GPUS   number of gpus to execute CryoSieve core program, 1 by default.
+                        fraction of retained particles in each iteration, 0.8 by default
+  --mask MASK           mask file path
+  --balance             randomly drop particles to make all subset into the same size
+  --num_gpus NUM_GPUS   number of gpus to execute CryoSieve core program, 1 by default
 ```
 
 There are several useful remarks:
 
-- CryoSieve utilizes the `RECONSTRUCT_SOFTWARE` in its reconstruction command. This enables you to enhance the speed of the reconstruction step through multiprocessing by using the option `--reconstruct_software "mpirun -n 5 relion_reconstruct_mpi"`. Additionally, you can further boost the reconstruction speed by using the option `--reconstruct_software "mpirun -n 5 relion_reconstruct_mpi --j 20"`, leveraging multi-threading.
+- CryoSieve utilizes the `RECONSTRUCT_SOFTWARE` in its reconstruction command. This enables you to enhance the speed of the reconstruction step through multiprocessing by using the option `--reconstruct_software "mpirun -n 5 relion_reconstruct_mpi"`.
 - If `POSTPROCESS_SOFTWARE` is not given, CryoSieve will skip the postprocessing step. Notice that postprocessing is not necessary for the sieving procedure.
 - Since `relion_reconstruct` use current directory as its default working directory, user should ensure that `relion_reconstruct` can correctly access the particles.
 
@@ -269,39 +273,38 @@ The program `cryosieve-csrefine` is designed to automatically and sequentially e
 
 ```
 $ cryosieve-csrefine -h
-usage: cryosieve-csrefine [-h] [--i I [I ...]] [--directory DIRECTORY] [--o O] [--sym SYM] [--ref REF]
-                          [--ini_high INI_HIGH] [--repeat REPEAT] --user USER --project PROJECT --workspace WORKSPACE
-                          --lane LANE [--nu] [--local] [--resplit] [--workers WORKERS]
-                          [--min_angular_step MIN_ANGULAR_STEP]
+usage: cryosieve-csrefine [-h] [--i I [I ...]] [--directory DIRECTORY] [--o O] [--sym SYM] [--ref REF] [--ini_high INI_HIGH] [--repeat REPEAT] --user USER
+                          --project PROJECT --workspace WORKSPACE --lane LANE [--nu] [--local] [--min_angular_step MIN_ANGULAR_STEP] [--resplit]
+                          [--workers WORKERS]
 
-cryosieve-csrefine: automatic SPA 3D-refinement by calling CryoSPARC.
+cryosieve-csrefine: automatic SPA 3D-refinement by calling CryoSPARC
 
-options:
+optional arguments:
   -h, --help            show this help message and exit
-  --i I [I ...]         input star file(s) or txt file(s) containing a list of star files.
+  --i I [I ...]         input star file(s) or txt file(s) containing a list of star files
   --directory DIRECTORY
-                        directory of particles, empty (current directory) by default.
-  --o O                 output summary csv file path. If not provided, no summary is written.
-  --sym SYM             molecular symmetry, C1 by default.
-  --ref REF             initial reference model. If not provided, CryoSPARC's ab-initio job will be used.
-  --ini_high INI_HIGH   initial resolution.
-  --repeat REPEAT       number of trials, 1 by default.
-  --user USER           e-mail address of the user of CryoSPARC.
-  --project PROJECT     project UID in CryoSPARC.
+                        directory of particles, empty (current directory) by default
+  --o O                 output summary csv file path. If not provided, no summary is written
+  --sym SYM             molecular symmetry, C1 by default
+  --ref REF             initial reference model. If not provided, CryoSPARC's ab-initio job will be used
+  --ini_high INI_HIGH   initial resolution
+  --repeat REPEAT       number of trials, 1 by default
+  --user USER           e-mail address of the user of CryoSPARC
+  --project PROJECT     project UID in CryoSPARC
   --workspace WORKSPACE
-                        workspace UID in CryoSPARC.
-  --lane LANE           lane selected for computing in CryoSPARC.
-  --nu                  use non-uniform refinement.
-  --local               use local refinement after homogeneous / non-uniform refinement.
+                        workspace UID in CryoSPARC
+  --lane LANE           lane selected for computing in CryoSPARC
+  --nu                  use non-uniform refinement
+  --local               use local refinement after homogeneous / non-uniform refinement
   --min_angular_step MIN_ANGULAR_STEP
-                        minimum angular step for local refinement.
-  --resplit             force re-do GS split.
-  --workers WORKERS     number of workers to run CryoSPARC job, unlimited by default.
+                        minimum angular step for local refinement
+  --resplit             force re-do GS split
+  --workers WORKERS     number of workers to run CryoSPARC job, unlimited by default
 ```
 
 There are several useful remarks:
 
-- The input parameter `--i` supports multiple star files, such as `--i a.star b.star c.star`. Wildcards can also be used, for example, `--i output/_iter?.star` will include `output/_iter0.star`, `output/_iter1.star` up to `output/_iter9.star` in the previous example. Additionally, the input file can be a `.txt` file containing star files, with each file listed on a separate line.
+- The input parameter `--i` supports multiple star files, such as `--i a.star b.star c.star`. Wildcards can also be used, for example, `--i output/iter?.star` will include `output/iter0.star`, `output/iter1.star` up to `output/iter9.star` in the previous example. Additionally, the input file can be a `.txt` file containing star files, with each file listed on a separate line.
 - When the `--o` parameter is provided, a summary report including resolutions and B-factors estimated by CryoSPARC will be written to a file in CSV format.
 - This program submits a series of jobs within a designated project and workspace. The compute resources are determined by the lane parameter. By default, the program refines all star files in parallel, but the option `--workers` allows you to limit the number of jobs executing simultaneously.
 
@@ -317,33 +320,32 @@ The program `cryosieve-csrhbfactor` is designed to automatically determine Rosen
 
 ```
 $ cryosieve-csrhbfactor -h
-usage: cryosieve-csrhbfactor [-h] [--i I [I ...]] [--directory DIRECTORY] --o O [--sym SYM] [--ref REF]
-                             [--ini_high INI_HIGH] [--voltage VOLTAGE] [--repeat REPEAT] [--halves HALVES] --user USER
-                             --project PROJECT --workspace WORKSPACE --lane LANE [--nu] [--resplit]
+usage: cryosieve-csrhbfactor [-h] [--i I [I ...]] [--directory DIRECTORY] --o O [--sym SYM] [--ref REF] [--ini_high INI_HIGH] [--voltage VOLTAGE]
+                             [--repeat REPEAT] [--halves HALVES] --user USER --project PROJECT --workspace WORKSPACE --lane LANE [--nu] [--resplit]
                              [--workers WORKERS]
 
-cryosieve-csrhbfactor: automatic Rosenthal-Henderson B-factor estimation by calling CryoSPARC.
+cryosieve-csrhbfactor: automatic Rosenthal-Henderson B-factor estimation by calling CryoSPARC
 
-options:
+optional arguments:
   -h, --help            show this help message and exit
-  --i I [I ...]         input star file(s) or txt file(s) containing a list of star files.
+  --i I [I ...]         input star file(s) or txt file(s) containing a list of star files
   --directory DIRECTORY
-                        directory of particles, empty (current directory) by default.
-  --o O                 output summary csv file path.
-  --sym SYM             molecular symmetry, C1 by default.
-  --ref REF             initial reference model. If not provided, CryoSPARC's ab-initio job will be used.
-  --ini_high INI_HIGH   initial resolution.
+                        directory of particles, empty (current directory) by default
+  --o O                 output summary csv file path
+  --sym SYM             molecular symmetry, C1 by default
+  --ref REF             initial reference model. If not provided, CryoSPARC's ab-initio job will be used
+  --ini_high INI_HIGH   initial resolution
   --voltage VOLTAGE     acceleration voltage (kV), 300 by default. Only 200 and 300 supported!
-  --repeat REPEAT       number of trials, 1 by default.
-  --halves HALVES       number of times executing halvings, 4 by default.
-  --user USER           e-mail address of the user of CryoSPARC.
-  --project PROJECT     project UID in CryoSPARC.
+  --repeat REPEAT       number of trials, 1 by default
+  --halves HALVES       number of times executing halvings, 4 by default
+  --user USER           e-mail address of the user of CryoSPARC
+  --project PROJECT     project UID in CryoSPARC
   --workspace WORKSPACE
-                        workspace UID in CryoSPARC.
-  --lane LANE           lane selected for computing in CryoSPARC.
-  --nu                  use non-uniform refinement.
-  --resplit             force re-do GS split.
-  --workers WORKERS     number of workers to run CryoSPARC job, unlimited by default.
+                        workspace UID in CryoSPARC
+  --lane LANE           lane selected for computing in CryoSPARC
+  --nu                  use non-uniform refinement
+  --resplit             force re-do GS split
+  --workers WORKERS     number of workers to run CryoSPARC job, unlimited by default
 ```
 
 There are several useful remarks:
@@ -353,6 +355,10 @@ There are several useful remarks:
 
 # Release Note
 
+* Version 1.3.0:
+  - Improve performance.
+  - Introduce better logging.
+  - Fix some bugs in GPU kernels, results of CryoSieve v1.3.x may differ slightly from previous 1.2.x version.
 * Version 1.2.8:
   - Fix some bugs and improve performance.
   - Add several arguments in `cryosieve-csrefine` and `cryosieve-csrhbfactor`.
