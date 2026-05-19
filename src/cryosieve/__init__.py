@@ -1,8 +1,7 @@
-__version__ = "1.3.0"
+__version__ = "1.3.1"
 
 import logging
 import logging.config
-import sys
 
 logging.config.dictConfig({
     'version': 1,
@@ -14,17 +13,19 @@ logging.config.dictConfig({
         },
     },
     'handlers': {
-        'stderr': {
+        'file': {
             'level': 'INFO',
             'formatter': 'standard',
-            'class': 'logging.StreamHandler',
-            'stream': sys.stderr,
+            'class': 'logging.FileHandler',
+            'filename': 'cryosieve.log',
+            'mode': 'a',
+            'encoding': 'utf-8',
         },
     },
     'loggers': {
         'CryoSieve': {
             'level': 'INFO',
-            'handlers': ['stderr'],
+            'handlers': ['file'],
             'propagate': False
         }
     }

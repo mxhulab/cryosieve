@@ -1,8 +1,5 @@
 import argparse
-import os
 import sys
-from pathlib import Path
-from time import time
 from . import logger
 
 def core_parser():
@@ -18,10 +15,12 @@ def core_parser():
     return parser
 
 def main(args):
+    import os
     import torch
     import torch.distributed
     import numpy as np
     import cupy as cp
+    from pathlib import Path
     from .ParticleDataset import ParticleDataset
     from .utility import mrcread
     from .sieve import sieve
@@ -84,23 +83,28 @@ def core():
     check_cupy()
 
     from .utility import run_commands
+    from time import time
+
     if args.num_gpus == 1:
         time0 = time()
         main(args)
         time1 = time()
         logger.info(f'Execute cryosieve-core (single GPU) successfully in {time1 - time0:.2f}s')
+
     else:
-        core_args = ' '.join([
+        core_command = ' '.join([
+            f'torchrun --standalone --nnodes=1 --nproc_per_node={args.num_gpus}',
+            f'-m cryosieve.core',
             f'--i "{args.i}"',
             f'--o "{args.o}"',
             f'--directory "{args.directory}"' if args.directory else '',
             f'--angpix {args.angpix}',
-            " ".join(f"--volume {volume}" for volume in args.volume),
+            ' '.join(f'--volume {volume}' for volume in args.volume),
             f'--mask "{args.mask}"' if args.mask is not None else '',
             f'--retention_ratio {args.retention_ratio}',
             f'--frequency {args.frequency}'
         ])
-        run_commands(f'torchrun --standalone --nnodes=1 --nproc_per_node={args.num_gpus} -m cryosieve.core ' + core_args, 'cryosieve-core (multi-GPU)')
+        run_commands(core_command, 'cryosieve-core (multi-GPU)')
 
 if __name__ == '__main__':
     main(core_parser().parse_args())
