@@ -1,5 +1,7 @@
 import argparse
 import csv
+import logging
+import logging.config
 import os
 import re
 import subprocess
@@ -10,6 +12,37 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 from time import sleep
 from random import uniform
+
+logging.config.dictConfig({
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'standard': {
+            'format': '[%(asctime)s][%(levelname)s] %(message)s',
+            'datefmt': r'%Y-%m-%d %H:%M:%S'
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'formatter': 'standard',
+            'class': 'logging.FileHandler',
+            'filename': 'cryosieve.log',
+        },
+    },
+    'loggers': {
+        'CryoSieve': {
+            'level': 'INFO',
+            'handlers': ['file'],
+            'propagate': False
+        }
+    }
+})
+logger = logging.getLogger('CryoSieve')
+cryosparc_job_total = None
+cryosparc_jobs_generated = 0
+cryosparc_jobs_enqueued = 0
+cryosparc_jobs_completed = 0
 
 def parse_argument():
     parser = argparse.ArgumentParser(description = 'cryosieve-csrefine: automatic SPA 3D-refinement by calling CryoSPARC')
@@ -48,6 +81,9 @@ def load_cryosparc(args):
     lock = Lock()
 
 def enqueue_and_wait(local_lane, **kwargs):
+    global cryosparc_jobs_generated, cryosparc_jobs_enqueued, cryosparc_jobs_completed
+    job_type = kwargs.get('job_type', 'unknown')
+
     with lock:
         job_id = client.make_job(
             user_id = user_id,
@@ -55,15 +91,24 @@ def enqueue_and_wait(local_lane, **kwargs):
             workspace_uid = workspace_uid,
             **kwargs
         )
+        cryosparc_jobs_generated += 1
+        logger.info(f'Generated CryoSPARC job {job_id} ({job_type}, {cryosparc_jobs_generated}/{cryosparc_job_total})')
+
         client.enqueue_job(project_uid, job_id, local_lane, user_id)
+        cryosparc_jobs_enqueued += 1
+        logger.info(f'Enqueued CryoSPARC job {job_id} ({job_type}, lane={local_lane}, {cryosparc_jobs_enqueued}/{cryosparc_job_total})')
 
     while True:
         sleep(uniform(20, 40))
-        with lock: job_status = client.get_job_status(project_uid, job_id)
-        if job_status == 'completed':
-            return job_id
-        elif job_status in ['failed', 'killed']:
-            raise RuntimeError(f'Job {job_id} is {job_status}')
+        with lock:
+            job_status = client.get_job_status(project_uid, job_id)
+            if job_status == 'completed':
+                cryosparc_jobs_completed += 1
+                logger.info(f'Completed CryoSPARC job {job_id} ({job_type}, {cryosparc_jobs_completed}/{cryosparc_job_total})')
+                return job_id
+            elif job_status in ['failed', 'killed']:
+                logger.error(f'CryoSPARC job {job_id} {job_status} ({job_type}, completed={cryosparc_jobs_completed}/{cryosparc_job_total})')
+                raise RuntimeError(f'Job {job_id} is {job_status}')
 
 def import_particles(particle_meta_path):
     import_job_id = enqueue_and_wait(
@@ -139,7 +184,7 @@ def parse_result(refine_job_id):
 
 def check_results(results, info = None):
     if info is not None:
-        print(info, results)
+        logger.info(f'{info} {results}')
     if any(result is None for result in results):
         raise RuntimeError('Error occurred during execution')
 
@@ -163,6 +208,15 @@ def main():
               ('--resplit ' if args.resplit else '') + \
               (f'--workers {args.workers} ' if args.workers is not None else '')
     subprocess.run(command, shell = True)
+
+def calculate_cryosparc_job_counts(num_particle_meta_paths):
+    return {
+        'import_particles' : num_particle_meta_paths,
+        'import_volumes' : 1 if args.ref is not None else 0,
+        'homo_abinit' : 0 if args.ref is not None else num_particle_meta_paths,
+        'refine' : num_particle_meta_paths * args.repeat,
+        'local_refine' : num_particle_meta_paths * args.repeat if args.local else 0
+    }
 
 def parse_meta_paths(paths):
     particle_meta_paths = []
@@ -192,6 +246,19 @@ if __name__ == '__main__':
     if args.ref is not None:
         if not Path(args.ref).is_file():
             raise FileNotFoundError(f'"{args.ref}" does not exist')
+
+    cryosparc_job_counts = calculate_cryosparc_job_counts(len(particle_meta_paths))
+    cryosparc_job_total = sum(cryosparc_job_counts.values())
+    logger.info(
+        f'Planned CryoSPARC jobs: total={cryosparc_job_total}, '
+        f'import_particles={cryosparc_job_counts["import_particles"]}, '
+        f'import_volumes={cryosparc_job_counts["import_volumes"]}, '
+        f'homo_abinit={cryosparc_job_counts["homo_abinit"]}, '
+        f'refine={cryosparc_job_counts["refine"]}, '
+        f'local_refine={cryosparc_job_counts["local_refine"]}, '
+        f'particle inputs={len(particle_meta_paths)}, repeat={args.repeat}, '
+        f'ref={args.ref is not None}, local={args.local}'
+    )
 
     # Setup.
     pool = ThreadPoolExecutor() if args.workers is None else ThreadPoolExecutor(max_workers = args.workers)
