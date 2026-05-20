@@ -5,11 +5,11 @@ from pathlib import Path
 from threading import Lock
 
 try:
-    from . import logger
+    from .logger import logger
 except ImportError:
     # Ensure running this script in $(cryosparcm env)
     sys.path.insert(0, str(Path(__file__).absolute().parent.parent))
-    from cryosieve import logger
+    from cryosieve.logger import logger
 
 cryosparc_job_total = None
 cryosparc_jobs_generated = 0

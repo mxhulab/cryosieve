@@ -1,6 +1,6 @@
 import argparse
 import sys
-from . import logger
+from .logger import logger
 
 def parse_argument():
     parser = argparse.ArgumentParser(description = 'cryosieve-csrhbfactor: automatic Rosenthal-Henderson B-factor estimation by calling CryoSPARC')
