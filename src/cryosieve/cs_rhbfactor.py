@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from scipy.optimize import curve_fit
+from . import logger
 from .cs_refine import parse_meta_paths
 
 def parse_argument():
@@ -61,10 +62,37 @@ def main():
         csvpath.touch()
     rawpath = csvpath.parent.joinpath(csvpath.stem + '_raw.csv')
 
+    num_input_meta_paths = len(particle_meta_paths)
+    rh_input_job_total = num_input_meta_paths * args.repeat * (args.halves + 1)
+    downstream_import_particles = rh_input_job_total
+    downstream_import_volumes = 1 if args.ref is not None else 0
+    downstream_abinit = 0 if args.ref is not None else rh_input_job_total
+    downstream_refine = rh_input_job_total
+    downstream_local_refine = 0
+    downstream_total = downstream_import_particles + downstream_import_volumes + downstream_abinit + downstream_refine + downstream_local_refine
+    logger.info(
+        f'Planned RH-factor input jobs: total={rh_input_job_total}, '
+        f'particle inputs={num_input_meta_paths}, repeat={args.repeat}, '
+        f'halving levels={args.halves + 1}, halves={args.halves}'
+    )
+    logger.info(
+        f'Planned downstream CryoSPARC jobs from RH-factor inputs: total={downstream_total}, '
+        f'import_particles={downstream_import_particles}, '
+        f'import_volumes={downstream_import_volumes}, '
+        f'ab_inito={downstream_abinit}, '
+        f'homo/nu_refine={downstream_refine}, '
+        f'local_refine={downstream_local_refine}, '
+        f'particle inputs={rh_input_job_total}, repeat=1, '
+        f'ref={args.ref is not None}, local=False'
+    )
+
     # For each star file, take random halves and save it to a temporary file.
     tmpdir = csvpath.parent.joinpath('tmp')
     tmpdir.mkdir(exist_ok = True)
-    with open(f'{str(tmpdir)}/list.txt', 'w') as lst_file:
+    list_path = tmpdir.joinpath('list.txt')
+    rh_input_jobs_generated = 0
+    rh_input_jobs_completed = 0
+    with open(list_path, 'w') as lst_file:
         for i, meta_path in enumerate(particle_meta_paths):
             star = starfile.read(meta_path, always_dict = True)
             if len(star) == 1 and (0 in star or '' in star or 'images' in star):
@@ -86,12 +114,16 @@ def main():
                         starfile.write({'images' : particles_j}, tmpfile, overwrite = True)
                     else:
                         starfile.write({'optics' : optics, 'particles' : particles_j}, tmpfile, overwrite = True)
+                    rh_input_jobs_generated += 1
+                    logger.info(f'[{rh_input_jobs_generated}/{rh_input_job_total}] Generated RH-factor input job {tmpfile} (source={meta_path}, repeat={j + 1}/{args.repeat}, halving={k}/{args.halves})')
                     print(tmpfile, file = lst_file)
+                    rh_input_jobs_completed += 1
+                    logger.info(f'[{rh_input_jobs_completed}/{rh_input_job_total}] Completed RH-factor input job {tmpfile} (listed in {list_path})')
 
     # Call cryosieve-csrefine to estimate resolutions.
     command = ' '.join([
         'cryosieve-csrefine',
-        f'--i {str(tmpdir)}/list.txt',
+        f'--i {str(list_path)}',
         f'--directory "{args.directory}"' if args.directory is not None else '',
         f'--o {str(rawpath)}',
         f'--sym {args.sym}',
@@ -105,9 +137,12 @@ def main():
         '--resplit' if args.resplit else '',
         f'--workers {args.workers}' if args.workers is not None else '',
     ])
+    logger.info(f'Starting cryosieve-csrefine subprocess for RH-factor estimation: inputs={rh_input_job_total}, expected CryoSPARC jobs={downstream_total}, raw output={rawpath}')
     process = subprocess.run(command, shell = True)
     if process.returncode:
+        logger.error(f'cryosieve-csrefine subprocess failed for RH-factor estimation: returncode={process.returncode}, inputs={rh_input_job_total}, raw output={rawpath}')
         raise RuntimeError('Error in running cryosieve-csrefine')
+    logger.info(f'Completed cryosieve-csrefine subprocess for RH-factor estimation: inputs={rh_input_job_total}, raw output={rawpath}')
 
     # Fit RH-curve.
     data = pd.read_csv(str(rawpath))
@@ -124,3 +159,4 @@ def main():
             rh_bfactor = -curve_fit(rh_bfactor_curve, resolutions, lognum_particles)[0][0]
             resolution = resolutions[::(args.halves + 1)].median()
             csvwriter.writerow([meta_path, resolution, rh_bfactor])
+    logger.info(f'Completed RH-factor estimation: output={csvpath}, raw output={rawpath}, particle inputs={num_input_meta_paths}, RH-factor input jobs={rh_input_job_total}')
