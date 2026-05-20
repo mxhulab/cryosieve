@@ -1,13 +1,6 @@
 import argparse
-import csv
-import starfile
-import subprocess
 import sys
-import numpy as np
-import pandas as pd
-from pathlib import Path
-from scipy.optimize import curve_fit
-from .cs_refine import parse_meta_paths
+from . import logger
 
 def parse_argument():
     parser = argparse.ArgumentParser(description = 'cryosieve-csrhbfactor: automatic Rosenthal-Henderson B-factor estimation by calling CryoSPARC')
@@ -27,6 +20,7 @@ def parse_argument():
     parser.add_argument('--nu',        action = 'store_true',       help = 'use non-uniform refinement')
     parser.add_argument('--resplit',   action = 'store_true',       help = 'force re-do GS split')
     parser.add_argument('--workers',   type = int,                  help = 'number of workers to run CryoSPARC job, unlimited by default')
+    parser.add_argument('--dry_run',   action = 'store_true',       help = 'simulate CryoSPARC jobs without connecting to CryoSPARC')
     if len(sys.argv) == 1:
         parser.print_help()
         exit()
@@ -36,9 +30,12 @@ def main():
     args = parse_argument()
 
     # Check args.
+    from .cs_refine import parse_meta_paths
     particle_meta_paths = parse_meta_paths(args.i)
+
     if args.voltage not in [200, 300]:
         raise ValueError('Only 200 or 300kV acceleration voltage supported')
+
     if len(args.sym) == 0 or args.sym[0] not in ['C', 'D', 'T', 'O', 'I']:
         raise ValueError('Invalid molecular symmetry')
     if args.sym[0] == 'C':
@@ -53,6 +50,8 @@ def main():
         N = 60
     else:
         raise ValueError('Invalid molecular symmetry')
+
+    from pathlib import Path
     csvpath = Path(args.o).absolute()
     if csvpath.suffix != '.csv':
         raise ValueError('output summary must be a .csv file')
@@ -61,10 +60,22 @@ def main():
         csvpath.touch()
     rawpath = csvpath.parent.joinpath(csvpath.stem + '_raw.csv')
 
+    num_input_meta_paths = len(particle_meta_paths)
+    num_particle_sets = num_input_meta_paths * args.repeat * (args.halves + 1)
+    logger.info(
+        f'Planned refinement jobs={num_particle_sets}, '
+        f'particle inputs={num_input_meta_paths}, repeat={args.repeat}, '
+        f'halving levels={args.halves + 1}'
+    )
+
     # For each star file, take random halves and save it to a temporary file.
+    import pandas as pd
+    import starfile
     tmpdir = csvpath.parent.joinpath('tmp')
     tmpdir.mkdir(exist_ok = True)
-    with open(f'{str(tmpdir)}/list.txt', 'w') as lst_file:
+    list_path = tmpdir.joinpath('list.txt')
+    i_particle_sets = 0
+    with open(list_path, 'w') as lst_file:
         for i, meta_path in enumerate(particle_meta_paths):
             star = starfile.read(meta_path, always_dict = True)
             if len(star) == 1 and (0 in star or '' in star or 'images' in star):
@@ -86,12 +97,14 @@ def main():
                         starfile.write({'images' : particles_j}, tmpfile, overwrite = True)
                     else:
                         starfile.write({'optics' : optics, 'particles' : particles_j}, tmpfile, overwrite = True)
+                    i_particle_sets += 1
+                    logger.info(f'[{i_particle_sets}/{num_particle_sets}] Generated RH-factor particle set {tmpfile} (source={meta_path}, repeat={j + 1}/{args.repeat}, halving={k}/{args.halves})')
                     print(tmpfile, file = lst_file)
 
     # Call cryosieve-csrefine to estimate resolutions.
     command = ' '.join([
         'cryosieve-csrefine',
-        f'--i {str(tmpdir)}/list.txt',
+        f'--i {str(list_path)}',
         f'--directory "{args.directory}"' if args.directory is not None else '',
         f'--o {str(rawpath)}',
         f'--sym {args.sym}',
@@ -103,18 +116,27 @@ def main():
         f'--lane {args.lane}',
         '--nu' if args.nu else '',
         '--resplit' if args.resplit else '',
+        '--dry_run' if args.dry_run else '',
         f'--workers {args.workers}' if args.workers is not None else '',
     ])
+    logger.info(f'Starting cryosieve-csrefine subprocess for RH-factor estimation: inputs={num_particle_sets}, raw output={rawpath}')
+
+    import subprocess
     process = subprocess.run(command, shell = True)
     if process.returncode:
+        logger.error(f'cryosieve-csrefine subprocess failed for RH-factor estimation: returncode={process.returncode}')
         raise RuntimeError('Error in running cryosieve-csrefine')
+    logger.info(f'Completed cryosieve-csrefine subprocess for RH-factor estimation: inputs={num_particle_sets}, raw output={rawpath}')
 
     # Fit RH-curve.
+    import numpy as np
     data = pd.read_csv(str(rawpath))
     num_points = args.repeat * (args.halves + 1)
     rh_bfactor_curve = lambda x, a : np.log(1437.5695 if args.voltage == 300 else 1831.7256) + a / (2 * x ** 2) - np.log(x)
 
     # Save results.
+    import csv
+    from scipy.optimize import curve_fit
     with open(csvpath, 'w') as csvfile:
         csvwriter = csv.writer(csvfile)
         csvwriter.writerow(['filename', 'resolution (A)', 'RH-b-factor (A^2)'])
@@ -124,3 +146,4 @@ def main():
             rh_bfactor = -curve_fit(rh_bfactor_curve, resolutions, lognum_particles)[0][0]
             resolution = resolutions[::(args.halves + 1)].median()
             csvwriter.writerow([meta_path, resolution, rh_bfactor])
+    logger.info(f'Completed RH-factor estimation: output={csvpath}, raw output={rawpath}')
