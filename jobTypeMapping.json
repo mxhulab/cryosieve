@@ -1,0 +1,1020 @@
+{
+  "types": {
+    "CRYOSIEVE": {
+      "displayName": "CryoSieve",
+      "initPrefix": "cryosieve",
+      "payloadSchema": {
+        "schemaId": "cryosieve.v1",
+        "payloadType": "PeerJobPayload",
+        "jsonSchema": {
+          "type": "object",
+          "properties": {
+            "command": {
+              "type": "string"
+            },
+            "o": {
+              "type": "string"
+            },
+            "url": {
+              "type": "string"
+            },
+            "fileJobPath": {
+              "type": "string"
+            },
+            "fileOutPath": {
+              "type": "string"
+            },
+            "scriptName": {
+              "type": "string"
+            },
+            "scriptType": {
+              "type": "string"
+            },
+            "starUrl": {
+              "type": "string",
+              "title": "STAR URL"
+            },
+            "particleDirectory": {
+              "type": "string",
+              "title": "Particle directory"
+            },
+            "maxFinalResolution": {
+              "type": "string",
+              "title": "Max final resolution"
+            },
+            "maxBfactor": {
+              "type": "string",
+              "title": "Max B-factor"
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "specSchema": {
+        "schemaId": "cryosieve.spec.v1",
+        "jsonSchema": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "reconstruct": {
+              "type": "string",
+              "default": "\"mpirun -n 5 relion_reconstruct_mpi\"",
+              "title": "Reconstruct command",
+              "description": "Command for reconstruction"
+            },
+            "postprocess": {
+              "type": "string",
+              "default": "relion_postprocess",
+              "title": "Postprocess command",
+              "description": "Command for postprocessing"
+            },
+            "sym": {
+              "type": "string",
+              "default": "C1",
+              "title": "Symmetry",
+              "description": "Molecular symmetry"
+            },
+            "num_iters": {
+              "type": [
+                "string",
+                "number"
+              ],
+              "default": "10",
+              "title": "Number of iterations",
+              "description": "Number of iterations for applying CryoSieve"
+            },
+            "frequency_start": {
+              "type": [
+                "string",
+                "number"
+              ],
+              "default": "50",
+              "title": "Starting frequency (Å)",
+              "description": "Starting threshold frequency (Å)"
+            },
+            "frequency_end": {
+              "type": [
+                "string",
+                "number"
+              ],
+              "default": "3",
+              "title": "Ending frequency (Å)",
+              "description": "Ending threshold frequency (Å)"
+            },
+            "retention_ratio": {
+              "type": [
+                "string",
+                "number"
+              ],
+              "default": "0.8",
+              "title": "Retention ratio",
+              "description": "Fraction of retained particles in each iteration"
+            },
+            "mask": {
+              "type": "string",
+              "title": "Mask",
+              "description": "Mask file"
+            },
+            "balance": {
+              "type": "boolean",
+              "default": false,
+              "title": "Balance",
+              "description": "Balance remaining particle subsets to the same size."
+            },
+            "num_gpus": {
+              "type": [
+                "string",
+                "number"
+              ],
+              "default": "1",
+              "title": "GPUs",
+              "description": "Number of GPUs to execute CryoSieve core program"
+            },
+            "selectedParticleId": {
+              "type": "string",
+              "title": "Selected particle ID"
+            },
+            "particles": {
+              "type": "string",
+              "title": "Particle"
+            },
+            "angpix": {
+              "title": "Pixel size (Å)",
+              "description": "Pixel size in Å. Defaults from the selected particle but remains user-editable.",
+              "type": [
+                "string",
+                "number"
+              ]
+            },
+            "description": {
+              "title": "Description",
+              "type": "string"
+            },
+            "lane": {
+              "type": "string",
+              "title": "Lane",
+              "description": "CryoSPARC lane selection."
+            }
+          },
+          "required": [
+            "reconstruct",
+            "mask"
+          ]
+        }
+      },
+      "ui": {
+        "parameters": {
+          "disabledKeys": [
+            "reconstruct",
+            "postprocess"
+          ]
+        },
+        "create": {
+          "sections": {
+            "general": [
+              "projectName",
+              "lane"
+            ],
+            "details": [
+              "id",
+              "title",
+              "description"
+            ],
+            "parameters": [
+              "reconstruct",
+              "postprocess",
+              "particles",
+              "angpix",
+              "sym",
+              "num_iters",
+              "frequency_start",
+              "frequency_end",
+              "retention_ratio",
+              "mask",
+              "balance",
+              "num_gpus"
+            ]
+          }
+        }
+      },
+      "command": {
+        "scriptType": "cryosieve",
+        "stages": [
+          {
+            "stageId": "S1_cryosieve",
+            "stageKey": "cryosieve",
+            "launcherType": "slurm",
+            "steps": [
+              {
+                "key": "01_cryosieve",
+                "execKey": "cryosieve",
+                "args": [
+                  {
+                    "key": "reconstruct",
+                    "flag": "--reconstruct",
+                    "from": "spec.reconstruct",
+                    "required": true
+                  },
+                  {
+                    "key": "postprocess",
+                    "flag": "--postprocess",
+                    "from": "spec.postprocess",
+                    "required": false
+                  },
+                  {
+                    "key": "starUrl",
+                    "flag": "--i",
+                    "from": "payload.starUrl",
+                    "required": false
+                  },
+                  {
+                    "key": "particleDirectory",
+                    "flag": "--directory",
+                    "from": "payload.particleDirectory",
+                    "required": false
+                  },
+                  {
+                    "key": "angpix",
+                    "flag": "--angpix",
+                    "from": "spec.angpix",
+                    "required": false
+                  },
+                  {
+                    "key": "sym",
+                    "flag": "--sym",
+                    "from": "spec.sym",
+                    "required": false
+                  },
+                  {
+                    "key": "num_iters",
+                    "flag": "--num_iters",
+                    "from": "spec.num_iters",
+                    "required": false
+                  },
+                  {
+                    "key": "frequency_start",
+                    "flag": "--frequency_start",
+                    "from": "spec.frequency_start",
+                    "required": false
+                  },
+                  {
+                    "key": "frequency_end",
+                    "flag": "--frequency_end",
+                    "from": "spec.frequency_end",
+                    "required": false
+                  },
+                  {
+                    "key": "retention_ratio",
+                    "flag": "--retention_ratio",
+                    "from": "spec.retention_ratio",
+                    "required": false
+                  },
+                  {
+                    "key": "mask",
+                    "flag": "--mask",
+                    "from": "spec.mask",
+                    "required": true
+                  },
+                  {
+                    "key": "balance",
+                    "flag": "--balance",
+                    "from": "spec.balance",
+                    "required": false,
+                    "boolean": true
+                  },
+                  {
+                    "key": "num_gpus",
+                    "flag": "--num_gpus",
+                    "from": "spec.num_gpus",
+                    "required": false
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "createMetaSchema": {
+        "schemaId": "cryosieve.create-meta.v1",
+        "jsonSchema": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "projectName": {
+              "title": "Project",
+              "description": "Project that owns this job."
+            },
+            "id": {
+              "title": "ID",
+              "description": "Auto-generated CoJ identifier. Globally unique and used as the job folder name.",
+              "required": true,
+              "readOnly": true
+            },
+            "title": {
+              "title": "Title",
+              "description": "Defaults to the ID if left empty.",
+              "required": true
+            }
+          }
+        }
+      }
+    },
+    "CSREFINE": {
+      "displayName": "CSRefine",
+      "initPrefix": "csrefine",
+      "payloadSchema": {
+        "schemaId": "csrefine.v1",
+        "payloadType": "PeerJobPayload",
+        "jsonSchema": {
+          "type": "object",
+          "properties": {
+            "particles": {
+              "type": "string"
+            },
+            "command": {
+              "type": "string"
+            },
+            "o": {
+              "type": "string"
+            },
+            "i_txt": {
+              "type": "string"
+            },
+            "angpix": {
+              "type": "string"
+            },
+            "fileJobPath": {
+              "type": "string"
+            },
+            "fileOutPath": {
+              "type": "string"
+            },
+            "scriptName": {
+              "type": "string"
+            },
+            "scriptType": {
+              "type": "string"
+            },
+            "selectedStarNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Selected star file names"
+            },
+            "particleDirectory": {
+              "type": "string",
+              "title": "Particle directory"
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "specSchema": {
+        "schemaId": "csrefine.spec.v1",
+        "jsonSchema": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "i": {
+              "type": "string",
+              "title": "Input",
+              "description": "Input star file(s) or txt file(s) containing a list of star files"
+            },
+            "sym": {
+              "type": "string",
+              "default": "C1",
+              "title": "Symmetry",
+              "description": "Molecular symmetry"
+            },
+            "ref": {
+              "type": "string",
+              "title": "Initial reference volume",
+              "description": "Initial reference volume, if not provided, CryoSPARC's ab-initio job will be used"
+            },
+            "ini_high": {
+              "type": [
+                "string",
+                "number"
+              ],
+              "title": "Initial resolution",
+              "description": "Initial resolution"
+            },
+            "repeat": {
+              "type": [
+                "string",
+                "number"
+              ],
+              "default": "1",
+              "title": "Number of trials",
+              "description": "Number of trials"
+            },
+            "user": {
+              "type": "string",
+              "title": "CryoSPARC user email",
+              "description": "Email address of the CryoSPARC user"
+            },
+            "project": {
+              "type": "string",
+              "title": "CryoSPARC project UID",
+              "description": "Project UID in CryoSPARC"
+            },
+            "workspace": {
+              "type": "string",
+              "title": "CryoSPARC workspace UID",
+              "description": "Workspace UID in CryoSPARC"
+            },
+            "cryosparcLane": {
+              "type": "string",
+              "title": "CryoSPARC lane",
+              "description": "Lane selected for computing in CryoSPARC"
+            },
+            "url": {
+              "type": "string",
+              "title": "CryoSPARC URL",
+              "description": "CryoSPARC URL, e.g., http://localhost:39000/browse"
+            },
+            "nu": {
+              "type": "boolean",
+              "default": true,
+              "title": "Use non-uniform refinement",
+              "description": "Use non-uniform refinement instead of homogeneous refinement"
+            },
+            "local": {
+              "type": "boolean",
+              "default": false,
+              "title": "Use extra local refinement",
+              "description": "Use local refinement after homogeneous / non-uniform refinement"
+            },
+            "min_angular_step": {
+              "type": [
+                "string",
+                "number"
+              ],
+              "title": "Minimum angular step (for local refinement)",
+              "description": "Minimum angular step for local refinement"
+            },
+            "resplit": {
+              "type": "boolean",
+              "default": false,
+              "title": "Force redo GS split",
+              "description": "Force redo GS split"
+            },
+            "workers": {
+              "type": [
+                "string",
+                "number"
+              ],
+              "title": "Number of workers (CryoSPARC jobs)",
+              "description": "Number of workers to run CryoSPARC job, unlimited by default"
+            },
+            "starList": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Star list"
+            },
+            "description": {
+              "label": "Description",
+              "description": "Optional notes about this job."
+            },
+            "activationCmd": {
+              "label": "Activation command",
+              "description": "Optional command retained with the job for downstream script generation.",
+              "required": false
+            }
+          },
+          "required": [
+            "i",
+            "user",
+            "project",
+            "workspace",
+            "cryosparcLane",
+            "url",
+            "starList"
+          ]
+        }
+      },
+      "ui": {
+        "create": {
+          "sections": {
+            "general": [
+              "projectName",
+              "activationCmd"
+            ],
+            "details": [
+              "id",
+              "title",
+              "description"
+            ],
+            "parameters": [
+              "i",
+              "sym",
+              "ref",
+              "ini_high",
+              "repeat",
+              "nu",
+              "local",
+              "min_angular_step",
+              "resplit",
+              "workers"
+            ],
+            "cryoSparc": [
+              "user",
+              "project",
+              "workspace",
+              "cryosparcLane",
+              "url"
+            ]
+          }
+        }
+      },
+      "command": {
+        "scriptType": "cryosieve-csrefine",
+        "stages": [
+          {
+            "stageId": "S1_cryosieve-csrefine",
+            "stageKey": "cryosieve-csrefine",
+            "launcherType": "bash",
+            "steps": [
+              {
+                "key": "01_csrefine",
+                "execKey": "cryosieve-csrefine",
+                "args": [
+                  {
+                    "key": "i",
+                    "flag": "--i",
+                    "from": "spec.i",
+                    "required": true
+                  },
+                  {
+                    "key": "particleDirectory",
+                    "flag": "--directory",
+                    "from": "payload.particleDirectory",
+                    "required": false
+                  },
+                  {
+                    "key": "sym",
+                    "flag": "--sym",
+                    "from": "spec.sym",
+                    "required": false
+                  },
+                  {
+                    "key": "ref",
+                    "flag": "--ref",
+                    "from": "spec.ref",
+                    "required": false
+                  },
+                  {
+                    "key": "ini_high",
+                    "flag": "--ini_high",
+                    "from": "spec.ini_high",
+                    "required": false
+                  },
+                  {
+                    "key": "repeat",
+                    "flag": "--repeat",
+                    "from": "spec.repeat",
+                    "required": false
+                  },
+                  {
+                    "key": "user",
+                    "flag": "--user",
+                    "from": "spec.user",
+                    "required": true
+                  },
+                  {
+                    "key": "project",
+                    "flag": "--project",
+                    "from": "spec.project",
+                    "required": true
+                  },
+                  {
+                    "key": "workspace",
+                    "flag": "--workspace",
+                    "from": "spec.workspace",
+                    "required": true
+                  },
+                  {
+                    "key": "cryosparcLane",
+                    "flag": "--lane",
+                    "from": "spec.cryosparcLane",
+                    "required": true
+                  },
+                  {
+                    "key": "nu",
+                    "flag": "--nu",
+                    "from": "spec.nu",
+                    "required": false,
+                    "boolean": true
+                  },
+                  {
+                    "key": "local",
+                    "flag": "--local",
+                    "from": "spec.local",
+                    "required": false,
+                    "boolean": true
+                  },
+                  {
+                    "key": "min_angular_step",
+                    "flag": "--min_angular_step",
+                    "from": "spec.min_angular_step",
+                    "required": false
+                  },
+                  {
+                    "key": "resplit",
+                    "flag": "--resplit",
+                    "from": "spec.resplit",
+                    "required": false,
+                    "boolean": true
+                  },
+                  {
+                    "key": "workers",
+                    "flag": "--workers",
+                    "from": "spec.workers",
+                    "required": false
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "createMetaSchema": {
+        "schemaId": "csrefine.create-meta.v1",
+        "jsonSchema": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "projectName": {
+              "title": "Project",
+              "description": "Project that owns this job."
+            },
+            "id": {
+              "title": "ID",
+              "description": "Auto-generated CoJ identifier. Globally unique and used as the job folder name.",
+              "required": true,
+              "readOnly": true
+            },
+            "title": {
+              "title": "Title",
+              "description": "Defaults to the ID if left empty.",
+              "required": true
+            }
+          }
+        }
+      }
+    },
+    "CSRHBFACTOR": {
+      "displayName": "CSRhBFactor",
+      "initPrefix": "csrhbfactor",
+      "payloadSchema": {
+        "schemaId": "csrhbfactor.v1",
+        "payloadType": "PeerJobPayload",
+        "jsonSchema": {
+          "type": "object",
+          "properties": {
+            "particles": {
+              "type": "string"
+            },
+            "command": {
+              "type": "string"
+            },
+            "o": {
+              "type": "string"
+            },
+            "i_txt": {
+              "type": "string"
+            },
+            "angpix": {
+              "type": "string"
+            },
+            "fileJobPath": {
+              "type": "string"
+            },
+            "fileOutPath": {
+              "type": "string"
+            },
+            "scriptName": {
+              "type": "string"
+            },
+            "scriptType": {
+              "type": "string"
+            },
+            "selectedStarNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Selected star file names"
+            },
+            "particleDirectory": {
+              "type": "string",
+              "title": "Particle directory"
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "specSchema": {
+        "schemaId": "csrhbfactor.spec.v1",
+        "jsonSchema": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "i": {
+              "type": "string",
+              "title": "Input",
+              "description": "Input star file(s) or txt file(s) containing a list of star files"
+            },
+            "sym": {
+              "type": "string",
+              "default": "C1",
+              "title": "Symmetry",
+              "description": "Molecular symmetry"
+            },
+            "ref": {
+              "type": "string",
+              "title": "Initial reference volume",
+              "description": "Initial reference volume, if not provided, CryoSPARC's ab-initio job will be used"
+            },
+            "ini_high": {
+              "type": [
+                "string",
+                "number"
+              ],
+              "title": "Initial resolution",
+              "description": "Initial resolution"
+            },
+            "voltage": {
+              "type": [
+                "string",
+                "number"
+              ],
+              "default": "300",
+              "title": "Voltage (200 or 300)",
+              "description": "Acceleration voltage (kV), only 200 and 300 supported!"
+            },
+            "repeat": {
+              "type": [
+                "string",
+                "number"
+              ],
+              "default": "1",
+              "title": "Number of trials",
+              "description": "Number of trials"
+            },
+            "halves": {
+              "type": [
+                "string",
+                "number"
+              ],
+              "default": "4",
+              "title": "Halvings",
+              "description": "Number of times executing halvings"
+            },
+            "nu": {
+              "type": "boolean",
+              "default": true,
+              "title": "Use non-uniform refinement",
+              "description": "Use non-uniform refinement instead of homogeneous refinement"
+            },
+            "resplit": {
+              "type": "boolean",
+              "default": false,
+              "title": "Force redo GS split",
+              "description": "Force redo GS split"
+            },
+            "workers": {
+              "type": [
+                "string",
+                "number"
+              ],
+              "title": "Number of workers (CryoSPARC jobs)",
+              "description": "Number of workers to run CryoSPARC job, unlimited by default"
+            },
+            "user": {
+              "type": "string",
+              "title": "CryoSPARC user email",
+              "description": "Email address of the CryoSPARC user."
+            },
+            "project": {
+              "type": "string",
+              "title": "CryoSPARC project UID",
+              "description": "Project UID in CryoSPARC"
+            },
+            "workspace": {
+              "type": "string",
+              "title": "CryoSPARC workspace UID",
+              "description": "Workspace UID in CryoSPARC"
+            },
+            "cryosparcLane": {
+              "type": "string",
+              "title": "CryoSPARC lane",
+              "description": "Lane selected for computing in CryoSPARC"
+            },
+            "url": {
+              "type": "string",
+              "title": "CryoSPARC URL",
+              "description": "CryoSPARC URL, e.g., http://localhost:39000/browse"
+            },
+            "starList": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Star list"
+            },
+            "description": {
+              "label": "Description",
+              "description": "Optional notes about this job."
+            },
+            "activationCmd": {
+              "label": "Activation command",
+              "description": "Optional command retained with the job for downstream script generation.",
+              "required": false
+            }
+          },
+          "required": [
+            "i",
+            "user",
+            "project",
+            "workspace",
+            "cryosparcLane",
+            "url",
+            "starList"
+          ]
+        }
+      },
+      "ui": {
+        "create": {
+          "sections": {
+            "general": [
+              "projectName",
+              "activationCmd"
+            ],
+            "details": [
+              "id",
+              "title",
+              "description"
+            ],
+            "parameters": [
+              "i",
+              "sym",
+              "ref",
+              "ini_high",
+              "voltage",
+              "repeat",
+              "halves",
+              "nu",
+              "resplit",
+              "workers"
+            ],
+            "cryoSparc": [
+              "user",
+              "project",
+              "workspace",
+              "cryosparcLane",
+              "url"
+            ]
+          }
+        }
+      },
+      "command": {
+        "scriptType": "cryosieve-csrhbfactor",
+        "stages": [
+          {
+            "stageId": "S1_cryosieve-csrhbfactor",
+            "stageKey": "cryosieve-csrhbfactor",
+            "launcherType": "bash",
+            "steps": [
+              {
+                "key": "01_csrhbfactor",
+                "execKey": "cryosieve-csrhbfactor",
+                "args": [
+                  {
+                    "key": "i",
+                    "flag": "--i",
+                    "from": "spec.i",
+                    "required": true
+                  },
+                  {
+                    "key": "particleDirectory",
+                    "flag": "--directory",
+                    "from": "payload.particleDirectory",
+                    "required": false
+                  },
+                  {
+                    "key": "sym",
+                    "flag": "--sym",
+                    "from": "spec.sym",
+                    "required": false
+                  },
+                  {
+                    "key": "ref",
+                    "flag": "--ref",
+                    "from": "spec.ref",
+                    "required": false
+                  },
+                  {
+                    "key": "ini_high",
+                    "flag": "--ini_high",
+                    "from": "spec.ini_high",
+                    "required": false
+                  },
+                  {
+                    "key": "voltage",
+                    "flag": "--voltage",
+                    "from": "spec.voltage",
+                    "required": false
+                  },
+                  {
+                    "key": "repeat",
+                    "flag": "--repeat",
+                    "from": "spec.repeat",
+                    "required": false
+                  },
+                  {
+                    "key": "halves",
+                    "flag": "--halves",
+                    "from": "spec.halves",
+                    "required": false
+                  },
+                  {
+                    "key": "nu",
+                    "flag": "--nu",
+                    "from": "spec.nu",
+                    "required": false,
+                    "boolean": true
+                  },
+                  {
+                    "key": "resplit",
+                    "flag": "--resplit",
+                    "from": "spec.resplit",
+                    "required": false,
+                    "boolean": true
+                  },
+                  {
+                    "key": "workers",
+                    "flag": "--workers",
+                    "from": "spec.workers",
+                    "required": false
+                  },
+                  {
+                    "key": "user",
+                    "flag": "--user",
+                    "from": "spec.user",
+                    "required": true
+                  },
+                  {
+                    "key": "project",
+                    "flag": "--project",
+                    "from": "spec.project",
+                    "required": true
+                  },
+                  {
+                    "key": "workspace",
+                    "flag": "--workspace",
+                    "from": "spec.workspace",
+                    "required": true
+                  },
+                  {
+                    "key": "cryosparcLane",
+                    "flag": "--lane",
+                    "from": "spec.cryosparcLane",
+                    "required": true
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "createMetaSchema": {
+        "schemaId": "csrhbfactor.create-meta.v1",
+        "jsonSchema": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "projectName": {
+              "title": "Project",
+              "description": "Project that owns this job."
+            },
+            "id": {
+              "title": "ID",
+              "description": "Auto-generated CoJ identifier. Globally unique and used as the job folder name.",
+              "required": true,
+              "readOnly": true
+            },
+            "title": {
+              "title": "Title",
+              "description": "Defaults to the ID if left empty.",
+              "required": true
+            }
+          }
+        }
+      }
+    }
+  }
+}

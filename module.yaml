@@ -1,0 +1,28 @@
+id: cryosieve
+displayName: CryoSieve
+version: 1
+repository: git@github.com:mxhulab/cryosieve.git
+provides:
+  jobTypes:
+    - CRYOSIEVE
+    - CSREFINE
+    - CSRHBFACTOR
+  commands:
+    - cryosieve
+    - cryosieve-csrefine
+    - cryosieve-csrhbfactor
+  capabilities:
+    - particle-set.consumer
+    - particle-selection.producer
+    - csrefine.producer
+requires:
+  external:
+    - relion
+resources:
+  jobTypeMapping: jobTypeMapping.json
+lineage:
+  consumes:
+    - capability: particle-set.producer
+  produces:
+    - capability: particle-selection.producer
+      artifactType: particle-selection
