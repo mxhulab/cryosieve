@@ -1,11 +1,8 @@
-import mrcfile
-import subprocess
 import numpy as np
-from time import time
 from typing import Optional
-from . import logger
 
 def check_cupy():
+    from .logger import logger
     try:
         import cupy as cp
     except ModuleNotFoundError:
@@ -16,6 +13,8 @@ def check_cupy():
         exit(1)
 
 def mrcread(fpath, i_slc : Optional[int] = None, cached_mrc_handles : Optional[dict] = None) -> np.memmap:
+    import mrcfile
+
     if cached_mrc_handles is not None and fpath in cached_mrc_handles:
         mrc = cached_mrc_handles[fpath]
     else:
@@ -24,6 +23,7 @@ def mrcread(fpath, i_slc : Optional[int] = None, cached_mrc_handles : Optional[d
     if i_slc is None:
         data = mrc.data
     elif mrc.data.ndim == 2:
+        from .logger import logger
         logger.warning(f"{str(fpath)} is an image, rendering it as a stack of 1 image")
         data = mrc.data
     else:
@@ -37,11 +37,16 @@ def mrcread(fpath, i_slc : Optional[int] = None, cached_mrc_handles : Optional[d
     return data
 
 def run_commands(commands, jobname = '', stdout = None, cwd = None):
+    import subprocess
+    from .logger import logger
+    from time import time
+
     time0 = time()
     if isinstance(commands, str): commands = [commands]
     processes = [subprocess.Popen(command, shell = True, stdout = stdout, cwd = cwd) for command in commands]
     for process in processes: process.wait()
     time1 = time()
+
     if all(process.returncode == 0 for process in processes):
         logger.info(f'Execute {jobname} successfully in {time1 - time0:.2f}s')
     else:

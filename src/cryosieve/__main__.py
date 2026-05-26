@@ -1,6 +1,6 @@
 import argparse
 import sys
-from . import logger
+from .logger import logger
 
 def parse_argument():
     parser = argparse.ArgumentParser(description = 'CryoSieve: a particle sorting and sieving software for single particle analysis in cryo-EM')
