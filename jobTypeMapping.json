@@ -58,7 +58,11 @@
           "properties": {
             "reconstruct": {
               "type": "string",
-              "default": "\"mpirun -n 5 relion_reconstruct_mpi\"",
+              "enum": [
+                "mpirun -n 5 relion_reconstruct_mpi",
+                "relion_reconstruct"
+              ],
+              "default": "mpirun -n 5 relion_reconstruct_mpi",
               "title": "Reconstruct command",
               "description": "Command for reconstruction"
             },
@@ -211,13 +215,14 @@
                 "args": [
                   {
                     "key": "reconstruct",
-                    "flag": "--reconstruct",
+                    "flag": "--reconstruct_software",
                     "from": "spec.reconstruct",
-                    "required": true
+                    "required": true,
+                    "doubleQuote": true
                   },
                   {
                     "key": "postprocess",
-                    "flag": "--postprocess",
+                    "flag": "--postprocess_software",
                     "from": "spec.postprocess",
                     "required": false
                   },
