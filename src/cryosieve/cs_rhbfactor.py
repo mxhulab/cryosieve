@@ -149,3 +149,6 @@ def main():
             resolution = resolutions[::(args.halves + 1)].median()
             csvwriter.writerow([meta_path, resolution, rh_bfactor])
     logger.info(f'Completed RH-factor estimation: output={csvpath}, raw output={rawpath}')
+
+if __name__ == '__main__':
+    main()
