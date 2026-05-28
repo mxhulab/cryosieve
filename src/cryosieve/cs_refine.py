@@ -1,5 +1,6 @@
 import argparse
 import os
+import subprocess
 import sys
 from pathlib import Path
 from threading import Lock
@@ -81,7 +82,49 @@ def load_dry_run(args):
     dry_run = True
     logger.info('Dry run enabled: simulate CryoSPARC jobs without connecting to CryoSPARC')
 
+def load_cryosparc_env():
+    try:
+        from cryosparc_compute.client import CommandClient  # noqa: F401
+        return
+    except ImportError:
+        pass
+
+    try:
+        result = subprocess.run(
+            ['bash', '-lc', 'cryosparcm env'],
+            check = True,
+            stdout = subprocess.PIPE,
+            stderr = subprocess.PIPE,
+            text = True
+        )
+    except FileNotFoundError as exc:
+        raise RuntimeError('bash is required to load CryoSPARC environment') from exc
+    except subprocess.CalledProcessError as exc:
+        detail = (exc.stderr or exc.stdout or '').strip()
+        message = 'failed to load CryoSPARC environment with `cryosparcm env`'
+        if detail:
+            message += f': {detail}'
+        raise RuntimeError(message) from exc
+
+    state = parse_shell_python_state(result.stdout)
+    os.environ.update(state.get('env', {}))
+    for path in state.get('sys_path', []):
+        if path and path not in sys.path:
+            sys.path.append(path)
+
+def parse_shell_python_state(script):
+    command = 'eval "$1" && python - <<\'PY\'\nimport json\nimport os\nimport sys\nprint(json.dumps({"env": dict(os.environ), "sys_path": sys.path}))\nPY'
+    result = subprocess.run(
+        ['bash', '-c', command, 'cryosparcm-env', script],
+        check = True,
+        stdout = subprocess.PIPE,
+        stderr = subprocess.PIPE,
+        text = True
+    )
+    return __import__('json').loads(result.stdout)
+
 def load_cryosparc(args):
+    load_cryosparc_env()
     from cryosparc_compute.client import CommandClient
     global host, port, client, user_id, project_uid, workspace_uid, lane
 
