@@ -84,7 +84,7 @@ def load_dry_run(args):
 
 def load_cryosparc_env():
     try:
-        import cryosparc_compute  # noqa: F401
+        from cryosparc_compute.client import CommandClient  # noqa: F401
         return
     except ImportError:
         pass
@@ -106,14 +106,14 @@ def load_cryosparc_env():
             message += f': {detail}'
         raise RuntimeError(message) from exc
 
-    env = parse_shell_env(result.stdout)
-    os.environ.update(env)
-    for path in env.get('PYTHONPATH', '').split(os.pathsep):
+    state = parse_shell_python_state(result.stdout)
+    os.environ.update(state.get('env', {}))
+    for path in state.get('sys_path', []):
         if path and path not in sys.path:
             sys.path.append(path)
 
-def parse_shell_env(script):
-    command = 'eval "$1" && python - <<\'PY\'\nimport json\nimport os\nprint(json.dumps(dict(os.environ)))\nPY'
+def parse_shell_python_state(script):
+    command = 'eval "$1" && python - <<\'PY\'\nimport json\nimport os\nimport sys\nprint(json.dumps({"env": dict(os.environ), "sys_path": sys.path}))\nPY'
     result = subprocess.run(
         ['bash', '-c', command, 'cryosparcm-env', script],
         check = True,
