@@ -483,11 +483,6 @@
             "description": {
               "label": "Description",
               "description": "Optional notes about this job."
-            },
-            "activationCmd": {
-              "label": "Activation command",
-              "description": "Optional command retained with the job for downstream script generation.",
-              "required": false
             }
           },
           "required": [
@@ -505,8 +500,7 @@
         "create": {
           "sections": {
             "general": [
-              "projectName",
-              "activationCmd"
+              "projectName"
             ],
             "details": [
               "id",
@@ -834,11 +828,6 @@
             "description": {
               "label": "Description",
               "description": "Optional notes about this job."
-            },
-            "activationCmd": {
-              "label": "Activation command",
-              "description": "Optional command retained with the job for downstream script generation.",
-              "required": false
             }
           },
           "required": [
@@ -856,8 +845,7 @@
         "create": {
           "sections": {
             "general": [
-              "projectName",
-              "activationCmd"
+              "projectName"
             ],
             "details": [
               "id",
