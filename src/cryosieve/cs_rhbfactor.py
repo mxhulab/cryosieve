@@ -1,4 +1,5 @@
 import argparse
+import shlex
 import sys
 from .logger import logger
 
@@ -103,7 +104,8 @@ def main():
 
     # Call cryosieve-csrefine to estimate resolutions.
     command = ' '.join([
-        'cryosieve-csrefine',
+        shlex.quote(sys.executable),
+        '-m cryosieve.cs_refine',
         f'--i {str(list_path)}',
         f'--directory "{args.directory}"' if args.directory is not None else '',
         f'--o {str(rawpath)}',
