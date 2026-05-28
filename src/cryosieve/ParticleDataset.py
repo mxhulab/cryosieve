@@ -205,3 +205,4 @@ class ParticleDataset(object):
         self.particles = self.particles.groupby('rlnRandomSubset').sample(n = n)
         self.particles.sort_index(inplace = True)
         self._parse_paras()
+        self.indices = np.arange(len(self.paras), dtype = np.int64)
