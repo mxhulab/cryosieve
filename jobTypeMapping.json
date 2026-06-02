@@ -58,7 +58,11 @@
           "properties": {
             "reconstruct": {
               "type": "string",
-              "default": "\"mpirun -n 5 relion_reconstruct_mpi\"",
+              "enum": [
+                "mpirun -n 5 relion_reconstruct_mpi",
+                "relion_reconstruct"
+              ],
+              "default": "mpirun -n 5 relion_reconstruct_mpi",
               "title": "Reconstruct command",
               "description": "Command for reconstruction"
             },
@@ -211,13 +215,14 @@
                 "args": [
                   {
                     "key": "reconstruct",
-                    "flag": "--reconstruct",
+                    "flag": "--reconstruct_software",
                     "from": "spec.reconstruct",
-                    "required": true
+                    "required": true,
+                    "doubleQuote": true
                   },
                   {
                     "key": "postprocess",
-                    "flag": "--postprocess",
+                    "flag": "--postprocess_software",
                     "from": "spec.postprocess",
                     "required": false
                   },
@@ -478,11 +483,6 @@
             "description": {
               "label": "Description",
               "description": "Optional notes about this job."
-            },
-            "activationCmd": {
-              "label": "Activation command",
-              "description": "Optional command retained with the job for downstream script generation.",
-              "required": false
             }
           },
           "required": [
@@ -500,8 +500,7 @@
         "create": {
           "sections": {
             "general": [
-              "projectName",
-              "activationCmd"
+              "projectName"
             ],
             "details": [
               "id",
@@ -829,11 +828,6 @@
             "description": {
               "label": "Description",
               "description": "Optional notes about this job."
-            },
-            "activationCmd": {
-              "label": "Activation command",
-              "description": "Optional command retained with the job for downstream script generation.",
-              "required": false
             }
           },
           "required": [
@@ -851,8 +845,7 @@
         "create": {
           "sections": {
             "general": [
-              "projectName",
-              "activationCmd"
+              "projectName"
             ],
             "details": [
               "id",
