@@ -77,13 +77,14 @@ class ParticleDataset(object):
             raise ValueError('Invalid particle star file')
 
         self._parse_paras()
+        self.indices = np.arange(len(self.paras), dtype = np.int64)
         self.cached_mrc_handles = dict() if enable_cache else None
 
     def _parse_paras(self):
         '''
         Parsing parameters from self.optics, self.particles.
         '''
-        self.paras = np.empty((len(self.particles), 14), dtype = np.float64)
+        self.paras = np.empty((len(self.particles), 15), dtype = np.float64)
 
         # Handling RELION 3.1 format by merging tables.
         if self.version == 2:
@@ -101,7 +102,6 @@ class ParticleDataset(object):
         rot  = np.radians(particles['rlnAngleRot'])
         tilt = np.radians(particles['rlnAngleTilt'])
         psi  = np.radians(particles['rlnAnglePsi'])
-        self.psi = psi
         self.paras[:,  2] =  np.cos((psi + rot) / 2) * np.cos(tilt / 2)
         self.paras[:,  3] = -np.sin((psi - rot) / 2) * np.sin(tilt / 2)
         self.paras[:,  4] = -np.cos((psi - rot) / 2) * np.sin(tilt / 2)
@@ -114,43 +114,47 @@ class ParticleDataset(object):
         self.paras[:, 11] = particles['rlnAmplitudeContrast']
         self.paras[:, 12] = np.radians(particles['rlnPhaseShift']) if 'rlnPhaseShift' in particles else 0.
         self.paras[:, 13] = self.pixel_size if self.version == 2 else particles['rlnImagePixelSize']
+        self.paras[:, 14] = psi
 
         split_data = particles['rlnImageName'].str.split('@', n = 2, expand = True)
         self.i_slcs = split_data[0].to_numpy(dtype = np.int32)
         self.names = split_data[1].to_numpy(dtype = np.str_)
 
     def __len__(self) -> int:
-        return len(self.paras)
+        return len(self.indices)
 
     def __getitem__(self, i : int):
-        assert 0 <= i < len(self.paras)
-        i_slc = self.i_slcs[i]
-        name = self.names[i]
+        assert 0 <= i < len(self.indices)
+        j = self.indices[i]
+        assert 0 <= j < len(self.paras)
+        i_slc = self.i_slcs[j]
+        name = self.names[j]
         mrc_path : Path = self.data_dir / name
         if not mrc_path.is_file():
             raise FileNotFoundError(f'No such particle stack file: "{str(mrc_path)}"')
-        return mrcread(mrc_path, i_slc - 1, self.cached_mrc_handles), self.paras[i]
+        return mrcread(mrc_path, i_slc - 1, self.cached_mrc_handles), self.paras[j]
 
     @property
     def trans(self) -> NDArray[np.float64]:
-        return self.paras[:, 0:2]
+        return self.paras[self.indices, 0:2]
 
     @property
     def quats(self) -> NDArray[np.float64]:
-        return self.paras[:, 2:6]
+        return self.paras[self.indices, 2:6]
 
     @property
     def ctfs(self) -> NDArray[np.float64]:
-        return self.paras[:, 6:14]
+        return self.paras[self.indices, 6:14]
 
     @property
     def psis(self) -> NDArray[np.float64]:
-        return self.psi
+        return self.paras[self.indices, 14]
 
     @property
     def data_dict(self) -> dict[str, pd.DataFrame]:
-        return {'images' : self.particles} if self.version == 2 else \
-            {'optics' : self.optics, 'particles' : self.particles}
+        particles = self.particles.iloc[self.indices]
+        return {'images' : particles} if self.version == 2 else \
+            {'optics' : self.optics, 'particles' : particles}
 
     def save(self, output_path : str):
         starfile.write(self.data_dict, output_path, overwrite = True)
@@ -162,15 +166,38 @@ class ParticleDataset(object):
     def get_random_subset(self, i : int):
         if 'rlnRandomSubset' not in self.particles:
             raise ValueError('Key rlnRandomSubset missed in star file')
-        return self.subset(self.particles['rlnRandomSubset'] == i)
+        return self.subset(self.particles['rlnRandomSubset'].iloc[self.indices] == i)
 
     def subset(self, mask):
         sub = copy(self)
-        sub.particles = self.particles[mask]
-        sub.paras = self.paras[mask]
-        sub.i_slcs = self.i_slcs[mask]
-        sub.names = self.names[mask]
+        sub.indices = self.indices[mask]
+        sub.cached_mrc_handles = self.cached_mrc_handles.copy()
         return sub
+
+    def union(self, *others):
+        if len(others) == 1 and isinstance(others[0], (list, tuple)):
+            others = tuple(others[0])
+
+        selected = np.zeros(len(self.paras), dtype = np.bool_)
+        selected[self.indices] = True
+        for other in others:
+            if not isinstance(other, ParticleDataset):
+                raise TypeError('Can only union with ParticleDataset')
+            if other.particles is not self.particles or other.paras is not self.paras or other.i_slcs is not self.i_slcs or other.names is not self.names:
+                raise ValueError('Cannot union subsets from different datasets')
+            selected[other.indices] = True
+
+        result = copy(self)
+        result.indices = np.arange(len(self.paras), dtype = np.int64)[selected]
+        return result
+
+    def complement(self):
+        selected = np.ones(len(self.parent), dtype = np.bool_)
+        selected[self.indices] = False
+
+        result = copy(self)
+        result.indices = np.arange(len(self.paras), dtype = np.int64)[selected]
+        return result
 
     def balance(self):
         if 'rlnRandomSubset' not in self.particles: return
@@ -178,3 +205,4 @@ class ParticleDataset(object):
         self.particles = self.particles.groupby('rlnRandomSubset').sample(n = n)
         self.particles.sort_index(inplace = True)
         self._parse_paras()
+        self.indices = np.arange(len(self.paras), dtype = np.int64)

@@ -1,6 +1,7 @@
 import argparse
+import shlex
 import sys
-from . import logger
+from .logger import logger
 
 def parse_argument():
     parser = argparse.ArgumentParser(description = 'CryoSieve: a particle sorting and sieving software for single particle analysis in cryo-EM')
@@ -103,7 +104,8 @@ def main():
 
         # sieve.
         command = ' '.join([
-            'cryosieve-core',
+            shlex.quote(sys.executable),
+            '-m cryosieve.core',
             f'--i "{str(dst / f"iter{i}.star")}"',
             f'--o "{str(dst / f"iter{i + 1}.star")}"',
             f'--directory "{str(data_dir)}"' if args.directory is not None else '',

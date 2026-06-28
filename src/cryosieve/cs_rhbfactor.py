@@ -1,6 +1,6 @@
 import argparse
 import sys
-from . import logger
+from .logger import logger
 
 def parse_argument():
     parser = argparse.ArgumentParser(description = 'cryosieve-csrhbfactor: automatic Rosenthal-Henderson B-factor estimation by calling CryoSPARC')
@@ -102,31 +102,33 @@ def main():
                     print(tmpfile, file = lst_file)
 
     # Call cryosieve-csrefine to estimate resolutions.
-    command = ' '.join([
-        'cryosieve-csrefine',
-        f'--i {str(list_path)}',
-        f'--directory "{args.directory}"' if args.directory is not None else '',
-        f'--o {str(rawpath)}',
-        f'--sym {args.sym}',
-        f'--ref "{args.ref}"' if args.ref is not None else '',
-        f'--ini_high {args.ini_high}' if args.ini_high is not None else '',
-        f'--user {args.user}',
-        f'--project {args.project}',
-        f'--workspace {args.workspace}',
-        f'--lane {args.lane}',
-        '--nu' if args.nu else '',
-        '--resplit' if args.resplit else '',
-        '--dry_run' if args.dry_run else '',
-        f'--workers {args.workers}' if args.workers is not None else '',
-    ])
-    logger.info(f'Starting cryosieve-csrefine subprocess for RH-factor estimation: inputs={num_particle_sets}, raw output={rawpath}')
+    from .cs_refine import process as refine_process
+    refine_args = argparse.Namespace(
+        i = [str(list_path)],
+        directory = args.directory,
+        o = str(rawpath),
+        sym = args.sym,
+        ref = args.ref,
+        ini_high = args.ini_high,
+        repeat = 1,
+        user = args.user,
+        project = args.project,
+        workspace = args.workspace,
+        lane = args.lane,
+        nu = args.nu,
+        local = False,
+        min_angular_step = 0.01,
+        resplit = args.resplit,
+        workers = args.workers,
+        dry_run = args.dry_run,
+    )
+    logger.info(f'Starting cryosieve-csrefine for RH-factor estimation: inputs={num_particle_sets}, raw output={rawpath}')
+    refine_process(refine_args)
+    logger.info(f'Completed cryosieve-csrefine for RH-factor estimation: inputs={num_particle_sets}, raw output={rawpath}')
 
-    import subprocess
-    process = subprocess.run(command, shell = True)
-    if process.returncode:
-        logger.error(f'cryosieve-csrefine subprocess failed for RH-factor estimation: returncode={process.returncode}')
-        raise RuntimeError('Error in running cryosieve-csrefine')
-    logger.info(f'Completed cryosieve-csrefine subprocess for RH-factor estimation: inputs={num_particle_sets}, raw output={rawpath}')
+    if args.dry_run:
+        logger.info('Dry run: skip RH-curve fitting and summary CSV output')
+        return
 
     # Fit RH-curve.
     import numpy as np
@@ -147,3 +149,6 @@ def main():
             resolution = resolutions[::(args.halves + 1)].median()
             csvwriter.writerow([meta_path, resolution, rh_bfactor])
     logger.info(f'Completed RH-factor estimation: output={csvpath}, raw output={rawpath}')
+
+if __name__ == '__main__':
+    main()
