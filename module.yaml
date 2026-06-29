@@ -18,8 +18,6 @@ provides:
 requires:
   external:
     - relion
-resources:
-  jobTypeMapping: jobTypeMapping.json
 lineage:
   consumes:
     - capability: particle-set.producer
