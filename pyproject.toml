@@ -40,6 +40,7 @@ classifiers = [
 [project.scripts]
 "cryosieve" = "cryosieve.__main__:main"
 "cryosieve-core" = "cryosieve.core:main"
+"cryosieve-reconstruct" = "cryosieve.reconstruct:main"
 "cryosieve-postprocess" = "cryosieve.postprocess:main"
 "cryosieve-csrefine" = "cryosieve.cs_refine:main"
 "cryosieve-csrhbfactor" = "cryosieve.cs_rhbfactor:main"

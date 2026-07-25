@@ -1,5 +1,6 @@
 import numpy as np
 from typing import Optional
+from collections import OrderedDict
 
 def check_cupy():
     from .logger import logger
@@ -12,11 +13,11 @@ def check_cupy():
         logger.error('cannot import CuPy module, please check your CUDA environment or GPU card')
         exit(1)
 
-def mrcread(fpath, i_slc : Optional[int] = None, cached_mrc_handles : Optional[dict] = None) -> np.memmap:
+def mrcread(fpath, i_slc : Optional[int] = None, cached_mrc_handles : Optional[OrderedDict] = None) -> np.memmap:
     import mrcfile
 
     if cached_mrc_handles is not None and fpath in cached_mrc_handles:
-        mrc = cached_mrc_handles[fpath]
+        mrc = cached_mrc_handles.pop(fpath)
     else:
         mrc = mrcfile.mmap(fpath, permissive = True, mode = 'r')
 
@@ -31,6 +32,10 @@ def mrcread(fpath, i_slc : Optional[int] = None, cached_mrc_handles : Optional[d
 
     if cached_mrc_handles is not None:
         cached_mrc_handles[fpath] = mrc
+        if len(cached_mrc_handles) > 128:
+            oldest = next(iter(cached_mrc_handles))
+            handle = cached_mrc_handles.pop(oldest)
+            handle.close()
     else:
         mrc.close()
 

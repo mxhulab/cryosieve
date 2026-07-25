@@ -2,6 +2,7 @@ import os
 import starfile
 import numpy as np
 import pandas as pd
+from collections import OrderedDict
 from copy import copy
 from pathlib import Path
 from os import PathLike
@@ -78,7 +79,7 @@ class ParticleDataset(object):
 
         self._parse_paras()
         self.indices = np.arange(len(self.paras), dtype = np.int64)
-        self.cached_mrc_handles = dict() if enable_cache else None
+        self.cached_mrc_handles = OrderedDict() if enable_cache else None
 
     def _parse_paras(self):
         '''

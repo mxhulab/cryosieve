@@ -3,15 +3,10 @@ import sys
 from argparse import Namespace
 from pathlib import Path
 from .logger import configure_logging, emit_progress, logger
-from .reconstruct_runner import (
-    is_coco_dfr_reconstruct,
-    run_reconstruct_commands,
-)
 
 
 def parse_argument():
     parser = argparse.ArgumentParser(description = 'CryoSieve: a particle sorting and sieving software for single particle analysis in cryo-EM')
-    parser.add_argument('--reconstruct_software', type = str,   required = True,  help = 'command for reconstruction')
     parser.add_argument('--i',                    type = str,   required = True,  help = 'input star file path')
     parser.add_argument('--o',                    type = str,   required = True,  help = 'output directory')
     parser.add_argument('--directory',            type = str,   required = False, help = 'directory of particles')
@@ -24,8 +19,8 @@ def parse_argument():
     parser.add_argument('--mask',                 type = str,   required = True,  help = 'mask file path')
     parser.add_argument('--random_seed',          type = int,   default  = None,  help = 'seed for postprocess phase randomization, unset by default')
     parser.add_argument('--balance',              action = 'store_true',          help = 'randomly drop particles to make all subset into the same size')
-    parser.add_argument('--iterative-gridding-correction', dest = 'iterative_gridding_correction', action = 'store_true', default = True, help = 'enable iterative gridding correction during reconstruction')
-    parser.add_argument('--no-iterative-gridding-correction', dest = 'iterative_gridding_correction', action = 'store_false', help = 'disable iterative gridding correction during reconstruction')
+    parser.add_argument('--skip_gridding',        action = 'store_true',          help = 'skip iterative gridding correction during reconstruction')
+    parser.add_argument('--iter',                 type = int,   default  = 10,    help = 'number of reconstruction gridding iterations, 10 by default')
     parser.add_argument('--num_gpus',             type = int,   default  = 1,     help = 'number of gpus to execute CryoSieve core program, 1 by default')
     if len(sys.argv) == 1:
         parser.print_help()
@@ -43,6 +38,7 @@ def main():
     import numpy as np
     from .ParticleDataset import ParticleDataset
     from .postprocess import postprocess
+    from .reconstruct import reconstruct_to_mrc
     from .sieve import barrier, destroy_distributed, init_distributed
 
     ctx = None
@@ -70,9 +66,6 @@ def main():
                 metadata={'iteration': 0, 'totalIterations': args.num_iters},
             )
 
-        gridding_correction_flag = '--iterative-gridding-correction' if args.iterative_gridding_correction else '--no-iterative-gridding-correction'
-        gridding_correction_arg = gridding_correction_flag if is_coco_dfr_reconstruct(args.reconstruct_software) else ''
-
         dataset = ParticleDataset(src, args.directory, args.angpix)
         args.angpix = dataset.pixel_size
         data_dir = dataset.data_dir.absolute()
@@ -92,38 +85,21 @@ def main():
                 logger.info(f'Start iteration {i}, overall retaining ratio {overall_retention_ratio * 100:.2f}%, threshold frequency {frequences[i]:.2f} Angstrom')
 
             # reconstruct.
-            commands = [
-                ' '.join([
-                    args.reconstruct_software,
-                    f'--i "{str(dst / f"iter{i}.star")}"',
-                    f'--o "{str(dst / f"iter{i}_half1.mrc")}"',
-                    f'--angpix {args.angpix}',
-                    f'--sym {args.sym}',
-                    '--ctf true',
-                    gridding_correction_arg,
-                    '--subset 1',
-                ]),
-                ' '.join([
-                    args.reconstruct_software,
-                    f'--i "{str(dst / f"iter{i}.star")}"',
-                    f'--o "{str(dst / f"iter{i}_half2.mrc")}"',
-                    f'--angpix {args.angpix}',
-                    f'--sym {args.sym}',
-                    '--ctf true',
-                    gridding_correction_arg,
-                    '--subset 2',
-                ])
-            ]
-            run_reconstruct_commands(
-                commands,
-                f'3D-reconstruction (iteration {i})',
-                cwd = data_dir,
-                output_dir = dst,
-                ctx = ctx,
-                reconstruct_software = args.reconstruct_software,
-                barrier_func = barrier,
-                iteration = i,
-            )
+            if ctx.is_main:
+                for subset in (1, 2):
+                    logger.info(f'Start 3D reconstruction iteration {i}, subset {subset}')
+                    reconstruct_to_mrc(
+                        dst / f'iter{i}.star',
+                        dst / f'iter{i}_half{subset}.mrc',
+                        directory = data_dir,
+                        pixel_size = args.angpix,
+                        symmetry = args.sym,
+                        subset = subset,
+                        apply_ctf = True,
+                        skip_gridding = args.skip_gridding,
+                        gridding_iterations = args.iter,
+                    )
+            barrier(ctx)
 
             # postprocess.
             if ctx.is_main:

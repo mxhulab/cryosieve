@@ -137,10 +137,10 @@ def _save_fsc_plot(path, curves, angpix, final_resolution):
     ax.set_xlim(0.0, shells[-1])
     ax.set_ylim(-0.1, 1.05)
     ax.xaxis.set_major_formatter(FuncFormatter(
-        lambda x, _: 'inf A' if x == 0.0 else f'{n * angpix / x:.2f} A'
+        lambda x, _: 'inf Å' if x == 0.0 else f'{n * angpix / x:.2f} Å'
     ))
-    ax.set_title(f'Final resolution = {n * angpix / final_shell:.2f} A',
-                 fontsize=30, fontweight='bold')
+    ax.set_title(f'Final resolution = {n * angpix / final_shell:.2f} Å',
+                  fontsize=30, fontweight='bold')
     ax.grid(alpha=0.4)
     ax.legend(frameon=True, prop={'size': 22, 'weight': 'bold'},
               loc='upper right')

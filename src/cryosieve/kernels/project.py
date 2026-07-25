@@ -38,6 +38,37 @@ extern "C" __global__ void project(
 }''', 'project')
 
 
+def quaternions_to_rotations(quaternions: ArrayLike) -> cp.ndarray:
+    '''Convert unit quaternions to rotation matrices.
+
+    Parameters
+    ----------
+    quaternions : ArrayLike
+        Shape (m, 4), dtype float64, in w-x-y-z order.
+
+    Returns
+    -------
+    rotations : cupy.ndarray
+        Shape (m, 3, 3), dtype float64.
+    '''
+    quaternions = cp.asarray(quaternions, dtype=cp.float64)
+    m = quaternions.shape[0]
+    assert quaternions.shape == (m, 4)
+
+    qw, qx, qy, qz = (quaternions[:, index] for index in range(4))
+    return cp.stack([
+        1 - 2 * (qy * qy + qz * qz),
+        2 * (qx * qy - qw * qz),
+        2 * (qx * qz + qw * qy),
+        2 * (qx * qy + qw * qz),
+        1 - 2 * (qx * qx + qz * qz),
+        2 * (qy * qz - qw * qx),
+        2 * (qx * qz - qw * qy),
+        2 * (qy * qz + qw * qx),
+        1 - 2 * (qx * qx + qy * qy),
+    ], axis=1).reshape((m, 3, 3))
+
+
 def project(volume: ArrayLike, quaternions: ArrayLike) -> cp.ndarray:
     '''Project a volume at unit-quaternion rotations.
 
@@ -54,23 +85,11 @@ def project(volume: ArrayLike, quaternions: ArrayLike) -> cp.ndarray:
         Shape (m, n, n), dtype float64.
     '''
     volume = cp.asarray(volume, dtype=cp.float64)
-    quaternions = cp.asarray(quaternions, dtype=cp.float64)
     n = volume.shape[0]
-    m = quaternions.shape[0]
-    assert volume.shape == (n, n, n) and quaternions.shape == (m, 4)
+    assert volume.shape == (n, n, n)
 
-    qw = quaternions[:, 0]
-    qx = quaternions[:, 1]
-    qy = quaternions[:, 2]
-    qz = quaternions[:, 3]
-    rotations = cp.stack([
-        1 - 2 * (qy * qy + qz * qz),
-        2 * (qx * qy - qw * qz),
-        2 * (qx * qz + qw * qy),
-        2 * (qx * qy + qw * qz),
-        1 - 2 * (qx * qx + qz * qz),
-        2 * (qy * qz - qw * qx),
-    ], axis=1)
+    rotations = quaternions_to_rotations(quaternions)
+    m = rotations.shape[0]
 
     stack = cp.zeros((m, n, n), dtype=cp.float64)
     for b in range(m):

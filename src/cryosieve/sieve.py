@@ -88,7 +88,11 @@ def score_particles(dataset, volume, threshold, device_id, num_gpus, g, cuda_dev
         stop = start + len(imgs)
         scores[start : stop] = cp.linalg.norm(projs, axis = (1, 2)) ** 2 - cp.linalg.norm(imgs, axis = (1, 2)) ** 2
         if (i_batch + 1) % log_interval == 0 or i_batch + 1 == n_batch:
-            logger.info(f'[GPU {device_id}][{i_batch + 1}/{n_batch}] Scored particle batches')
+            logger.info(
+                f'[GPU {device_id}]'
+                f'[Batch {i_batch + 1}/{n_batch}]'
+                f'[Particle {stop}/{r - l}] Scored particles'
+            )
 
     g[l : r] = cp.asnumpy(scores)
 
