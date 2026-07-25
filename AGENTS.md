@@ -50,6 +50,10 @@ filtered STAR structure.
 contiguity, dtype, and lifetime across the bridge. Kernel changes under
 `src/cryosieve/kernels/` require numerical comparison for projection, CTF,
 Fourier filters, rotation, and translation rather than only a successful run.
+All Python and CUDA C++ code under that directory must follow the authoritative
+kernel conventions in `src/cryosieve/kernels/AGENTS.md`. New code follows those
+conventions immediately; existing kernels may be migrated incrementally during
+the v2.0.0 development cycle.
 
 Multi-GPU execution is single-node, one process, and one Python worker thread
 per GPU. Each worker selects its CUDA device, handles a contiguous particle

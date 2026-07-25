@@ -1,56 +1,67 @@
 import cupy as cp
 from numpy.typing import ArrayLike
+
 from . import ceil_div
 
-ker_rotate2d = cp.RawKernel(r'''
-extern "C" __global__ void rotate2d(
+
+_rotate_2d_kernel = cp.RawKernel(r'''
+extern "C" __global__ void rotate_2d(
     const double* stack,
     int m,
     int n,
-    const double* psi,
-    double* new_stack)
+    const double* angles,
+    double* rotated_stack)
 {
     int tid = blockDim.x * blockIdx.x + threadIdx.x;
     if (tid < m * n * n) {
-        int x = tid % n     - n / 2;
-        int y = tid / n % n - n / 2;
-        int z = tid / n / n;
+        int b = tid / n / n;
+        int j = tid / n % n;
+        int i = tid % n;
+        int y = j - n / 2;
+        int x = i - n / 2;
 
-        double vx = x *  cos(psi[z]) + y * sin(psi[z]) + n / 2;
-        double vy = x * -sin(psi[z]) + y * cos(psi[z]) + n / 2;
-        x = floor(vx);
-        y = floor(vy);
-        double dx = vx - x;
-        double dy = vy - y;
+        double xp = x *  cos(angles[b]) + y * sin(angles[b]);
+        double yp = x * -sin(angles[b]) + y * cos(angles[b]);
+        double xpi = xp + n / 2;
+        double ypi = yp + n / 2;
+        int ip = floor(xpi);
+        int jp = floor(ypi);
+        double dx = xpi - ip;
+        double dy = ypi - jp;
 
-        if (0 <= x     && x     < n && 0 <= y     && y     < n) new_stack[tid] += stack[(z * n + y    ) * n + x    ] * (1 - dx) * (1 - dy);
-        if (0 <= x + 1 && x + 1 < n && 0 <= y     && y     < n) new_stack[tid] += stack[(z * n + y    ) * n + x + 1] * (    dx) * (1 - dy);
-        if (0 <= x     && x     < n && 0 <= y + 1 && y + 1 < n) new_stack[tid] += stack[(z * n + y + 1) * n + x    ] * (1 - dx) * (    dy);
-        if (0 <= x + 1 && x + 1 < n && 0 <= y + 1 && y + 1 < n) new_stack[tid] += stack[(z * n + y + 1) * n + x + 1] * (    dx) * (    dy);
+        if (0 <= ip     && ip     < n && 0 <= jp     && jp     < n) rotated_stack[tid] += stack[(b * n + jp    ) * n + ip    ] * (1 - dx) * (1 - dy);
+        if (0 <= ip + 1 && ip + 1 < n && 0 <= jp     && jp     < n) rotated_stack[tid] += stack[(b * n + jp    ) * n + ip + 1] * (    dx) * (1 - dy);
+        if (0 <= ip     && ip     < n && 0 <= jp + 1 && jp + 1 < n) rotated_stack[tid] += stack[(b * n + jp + 1) * n + ip    ] * (1 - dx) * (    dy);
+        if (0 <= ip + 1 && ip + 1 < n && 0 <= jp + 1 && jp + 1 < n) rotated_stack[tid] += stack[(b * n + jp + 1) * n + ip + 1] * (    dx) * (    dy);
     }
-}''', 'rotate2d')
+}''', 'rotate_2d')
 
-def rotate2d(stack : ArrayLike, angles : ArrayLike) -> cp.ndarray:
-    '''Rotate 2D images (counter clock-wise) in real space
+
+def rotate_2d(stack: ArrayLike, angles: ArrayLike) -> cp.ndarray:
+    '''Rotate real 2D images counterclockwise.
 
     Parameters
     ----------
     stack : ArrayLike
-        shape (m, n, n), dtype float64
+        Shape (m, n, n), dtype float64.
     angles : ArrayLike
-        shape (m, ), dtype float64, angles in radians
+        Shape (m,), dtype float64, angles in radians equivalent to RELION psi
+        Euler angles.
 
     Returns
     -------
-    new_stack : cupy.ndarray
-        shape (m, n, n), dtype float64
+    rotated_stack : cupy.ndarray
+        Shape (m, n, n), dtype float64. Out-of-bounds samples contribute zero.
     '''
-    stack = cp.asarray(stack, dtype = cp.float64)
-    angles = cp.asarray(angles, dtype = cp.float64)
-    m = stack.shape[0]
-    n = stack.shape[1]
-    assert stack.shape == (m, n, n) and angles.shape == (m, )
+    stack = cp.asarray(stack, dtype=cp.float64)
+    angles = cp.asarray(angles, dtype=cp.float64)
+    m, n = stack.shape[:2]
+    assert stack.shape == (m, n, n) and angles.shape == (m,)
 
-    new_stack = cp.zeros((m, n, n), dtype = cp.float64)
-    ker_rotate2d((ceil_div(stack.size, 256), ), (256, ), (stack, m, n, angles, new_stack))
-    return new_stack
+    rotated_stack = cp.zeros((m, n, n), dtype=cp.float64)
+    _rotate_2d_kernel(
+        (ceil_div(stack.size, 256),),
+        (256,),
+        (stack, m, n, angles, rotated_stack),
+    )
+    return rotated_stack

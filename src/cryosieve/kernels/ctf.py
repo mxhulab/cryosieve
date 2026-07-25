@@ -1,93 +1,134 @@
 import cupy as cp
-from cupy.fft import rfftn, irfftn
+from cupy.fft import irfftn, rfftn
 from numpy.typing import ArrayLike
+
 from . import ceil_div
 
-ker_get_ctf = cp.RawKernel(r'''
+
+_get_ctf_kernel = cp.RawKernel(r'''
 extern "C" __global__ void get_ctf(
-    double* f_ctf,
+    double* ctf_ft,
     int m,
     int n,
     const double* ctfs,
     int order)
 {
     int tid = blockDim.x * blockIdx.x + threadIdx.x;
-    int n_ = n / 2 + 1;
-    if (tid < m * n * n_) {
-        int x = tid % n_;
-        int y = tid / n_ % n; y = y < n_ ? y : y - n;
-        int z = tid / n_ / n;
+    int nh = n / 2 + 1;
+    if (tid < m * n * nh) {
+        int b = tid / nh / n;
+        int j = tid / nh % n;
+        int i = tid % nh;
+        int y = j < nh ? j : j - n;
+        int x = i;
 
-        double voltage           = ctfs[z * 8    ];
-        double defocusU          = ctfs[z * 8 + 1];
-        double defocusV          = ctfs[z * 8 + 2];
-        double astigmatism       = ctfs[z * 8 + 3];
-        double Cs                = ctfs[z * 8 + 4];
-        double amplitudeContrast = ctfs[z * 8 + 5];
-        double phaseShift        = ctfs[z * 8 + 6];
-        double pixelSize         = ctfs[z * 8 + 7];
+        double voltage           = ctfs[b * 8    ];
+        double defocus_u         = ctfs[b * 8 + 1];
+        double defocus_v         = ctfs[b * 8 + 2];
+        double astigmatism       = ctfs[b * 8 + 3];
+        double cs                = ctfs[b * 8 + 4];
+        double amplitude_contrast = ctfs[b * 8 + 5];
+        double phase_shift       = ctfs[b * 8 + 6];
+        double pixel_size        = ctfs[b * 8 + 7];
 
         double pi = 3.1415926535897932384626;
-        double waveLength = 12.2643247 / sqrt(voltage * (1 + voltage * 0.978466e-6));
-        double f = hypot(x / (pixelSize * n), y / (pixelSize * n));
+        double wavelength = 12.2643247 / sqrt(voltage * (1 + voltage * 0.978466e-6));
+        double frequency = hypot(x / (pixel_size * n), y / (pixel_size * n));
         double alpha = atan2((double)y, (double)x) - astigmatism;
-        double defocus = -(defocusU + defocusV + (defocusU - defocusV) * cos(2 * alpha)) / 2;
-        double chi = pi * waveLength * defocus * pow(f, 2.) + pi / 2 * Cs * pow(waveLength, 3.) * pow(f, 4.) - phaseShift;
-        f_ctf[tid] = pow(-sqrt(1 - pow(amplitudeContrast, 2.)) * sin(chi) + amplitudeContrast * cos(chi), (double)order);
+        double defocus = -(defocus_u + defocus_v + (defocus_u - defocus_v) * cos(2 * alpha)) / 2;
+        double chi = pi * wavelength * defocus * pow(frequency, 2.) + pi / 2 * cs * pow(wavelength, 3.) * pow(frequency, 4.) - phase_shift;
+        ctf_ft[tid] = pow(-sqrt(1 - pow(amplitude_contrast, 2.)) * sin(chi) + amplitude_contrast * cos(chi), (double)order);
     }
 }''', 'get_ctf')
 
-def get_ctf(ctfs : ArrayLike, n : int, order : int = 1) -> cp.ndarray:
-    '''Get CTF in Fourier domain
+
+def get_ctf(ctfs: ArrayLike, n: int, order: int = 1) -> cp.ndarray:
+    '''Get CTF in Fourier space.
 
     Parameters
     ----------
     ctfs : ArrayLike
-        shape (m, 8), dtype float64,
-        (voltage, defocus 1, defocus 2, astimatism angle, Cs, amplitude contrast, phase shift, pixelsize)
+        Shape (m, 8), dtype float64: voltage, defocus U, defocus V,
+        astigmatism angle, Cs, amplitude contrast, phase shift, and pixel size.
+    n : int
+        Real-space image side length.
     order : int
+        CTF exponent, 1 by default.
 
     Returns
     -------
-    f_ctf : cupy.ndarray
-        shape (m, n, n), dtype float64,
-        CTF ** order
+    ctf_ft : cupy.ndarray
+        Shape (m, n, n // 2 + 1), dtype float64, containing CTF ** order.
     '''
-    ctfs = cp.asarray(ctfs, dtype = cp.float64)
+    ctfs = cp.asarray(ctfs, dtype=cp.float64)
     m = ctfs.shape[0]
     assert ctfs.shape == (m, 8)
 
-    f_ctf = cp.empty((m, n, n // 2 + 1), dtype = cp.float64)
-    ker_get_ctf((ceil_div(f_ctf.size, 256), ), (256, ), (f_ctf, m, n, ctfs, order))
-    return f_ctf
+    ctf_ft = cp.empty((m, n, n // 2 + 1), dtype=cp.float64)
+    _get_ctf_kernel(
+        (ceil_div(ctf_ft.size, 256),),
+        (256,),
+        (ctf_ft, m, n, ctfs, order),
+    )
+    return ctf_ft
 
-def convolute_ctf(stack : cp.ndarray, ctfs : ArrayLike, order : int = 1) -> cp.ndarray:
-    '''Convolute CTF
+
+def convolute_ctf_ft(
+    stack_ft: cp.ndarray,
+    ctfs: ArrayLike,
+    order: int = 1,
+) -> cp.ndarray:
+    '''Convolute a 2D stack in place in Fourier space.
 
     Parameters
     ----------
-    stack : cupy.ndarray
-        shape (m, n, n), dtype float64
+    stack_ft : cupy.ndarray
+        Shape (m, n, n // 2 + 1), dtype complex128, the rfftn half-spectrum
+        over axes (1, 2). Modified in place.
     ctfs : ArrayLike
-        shape (m, 8), dtype float64,
-        (voltage, defocus 1, defocus 2, astimatism angle, Cs, amplitude contrast, phase shift, pixelsize)
+        Shape (m, 8), dtype float64.
     order : int
-        1 by default,
-        how many times the CTF function is convoluted
+        CTF exponent, 1 by default.
 
     Returns
     -------
-    new_stack : cupy.ndarray
-        shape (m, n, n), dtype float64,
-        convolute(stack, CTF ** order)
+    stack_ft : cupy.ndarray
+        The modified input Fourier array.
     '''
-    stack = cp.asarray(stack, dtype = cp.float64)
-    ctfs = cp.asarray(ctfs, dtype = cp.float64)
-    m = stack.shape[0]
-    n = stack.shape[1]
-    assert stack.shape == (m, n, n) and ctfs.shape == (m, 8)
+    m = stack_ft.shape[0]
+    n = stack_ft.shape[1]
+    assert stack_ft.shape == (m, n, n // 2 + 1)
+    assert stack_ft.dtype == cp.complex128
 
-    f_stack = rfftn(stack, axes = (1, 2))
-    f_ctf = get_ctf(ctfs, n, order)
-    f_stack *= f_ctf
-    return irfftn(f_stack, axes = (1, 2))
+    stack_ft *= get_ctf(ctfs, n, order)
+    return stack_ft
+
+
+def convolute_ctf(
+    stack: ArrayLike,
+    ctfs: ArrayLike,
+    order: int = 1,
+) -> cp.ndarray:
+    '''Convolute a real 2D image stack with its CTF.
+
+    Parameters
+    ----------
+    stack : ArrayLike
+        Shape (m, n, n), dtype float64.
+    ctfs : ArrayLike
+        Shape (m, 8), dtype float64.
+    order : int
+        CTF exponent, 1 by default.
+
+    Returns
+    -------
+    convolved_stack : cupy.ndarray
+        Shape (m, n, n), dtype float64.
+    '''
+    stack = cp.asarray(stack, dtype=cp.float64)
+    m, n = stack.shape[:2]
+    assert stack.shape == (m, n, n)
+
+    stack_ft = rfftn(stack, axes=(1, 2))
+    convolute_ctf_ft(stack_ft, ctfs, order)
+    return irfftn(stack_ft, s=(n, n), axes=(1, 2))

@@ -7,7 +7,7 @@ import torch
 import torch.distributed as dist
 from threading import Thread
 from torch.utils.data import DataLoader
-from .kernels import convolute_ctf, highpass2d, project, translate
+from .kernels import convolute_ctf, highpass_2d, project, translate_2d
 from .logger import logger
 
 
@@ -80,10 +80,10 @@ def score_particles(dataset, volume, threshold, device_id, num_gpus, g, cuda_dev
         ctfs  = paras[:, 6:14]
 
         # Compute score
-        imgs = translate(imgs, trans)
+        imgs = translate_2d(imgs, trans)
         projs = convolute_ctf(project(volume, quats), ctfs) - imgs
-        imgs = highpass2d(imgs, threshold)
-        projs = highpass2d(projs, threshold)
+        imgs = highpass_2d(imgs, threshold)
+        projs = highpass_2d(projs, threshold)
         start = i_batch * batch_size
         stop = start + len(imgs)
         scores[start : stop] = cp.linalg.norm(projs, axis = (1, 2)) ** 2 - cp.linalg.norm(imgs, axis = (1, 2)) ** 2
