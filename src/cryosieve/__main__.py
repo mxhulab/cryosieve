@@ -4,9 +4,6 @@ from argparse import Namespace
 from pathlib import Path
 from .logger import configure_logging, emit_progress, logger
 from .reconstruct_runner import (
-    DFR_LOG_NAME,
-    POSTPROCESS_LOG_NAME,
-    child_env,
     is_coco_dfr_reconstruct,
     run_reconstruct_commands,
 )
@@ -15,7 +12,6 @@ from .reconstruct_runner import (
 def parse_argument():
     parser = argparse.ArgumentParser(description = 'CryoSieve: a particle sorting and sieving software for single particle analysis in cryo-EM')
     parser.add_argument('--reconstruct_software', type = str,   required = True,  help = 'command for reconstruction')
-    parser.add_argument('--postprocess_software', type = str,   required = False, help = 'command for postprocessing')
     parser.add_argument('--i',                    type = str,   required = True,  help = 'input star file path')
     parser.add_argument('--o',                    type = str,   required = True,  help = 'output directory')
     parser.add_argument('--directory',            type = str,   required = False, help = 'directory of particles')
@@ -26,6 +22,7 @@ def parse_argument():
     parser.add_argument('--frequency_end',        type = float, default  = 3.,    help = 'ending threshold frquency, in Angstrom, 3 by default')
     parser.add_argument('--retention_ratio',      type = float, default  = 0.8,   help = 'fraction of retained particles in each iteration, 0.8 by default')
     parser.add_argument('--mask',                 type = str,   required = True,  help = 'mask file path')
+    parser.add_argument('--random_seed',          type = int,   default  = None,  help = 'seed for postprocess phase randomization, unset by default')
     parser.add_argument('--balance',              action = 'store_true',          help = 'randomly drop particles to make all subset into the same size')
     parser.add_argument('--iterative-gridding-correction', dest = 'iterative_gridding_correction', action = 'store_true', default = True, help = 'enable iterative gridding correction during reconstruction')
     parser.add_argument('--no-iterative-gridding-correction', dest = 'iterative_gridding_correction', action = 'store_false', help = 'disable iterative gridding correction during reconstruction')
@@ -39,16 +36,14 @@ def parse_argument():
 def main():
     configure_logging(source='cryosieve')
     args = parse_argument()
-    if args.postprocess_software is not None:
-        logger.warning('Argument `--postprocess_software` will be deprecated')
 
     from .utility import check_cupy
     check_cupy()
 
     import numpy as np
     from .ParticleDataset import ParticleDataset
+    from .postprocess import postprocess
     from .sieve import barrier, destroy_distributed, init_distributed
-    from .utility import run_commands
 
     ctx = None
     try:
@@ -79,6 +74,7 @@ def main():
         gridding_correction_arg = gridding_correction_flag if is_coco_dfr_reconstruct(args.reconstruct_software) else ''
 
         dataset = ParticleDataset(src, args.directory, args.angpix)
+        args.angpix = dataset.pixel_size
         data_dir = dataset.data_dir.absolute()
         if ctx.is_main:
             logger.info(f'Initialize ParticleDataset with given directory {str(data_dir)}')
@@ -130,21 +126,22 @@ def main():
             )
 
             # postprocess.
-            if ctx.is_main and args.postprocess_software is not None:
-                pp_dir = dst / f'postprocess_iter{i}'
-                pp_dir.mkdir(parents = True, exist_ok = True)
-                command = ' '.join([
-                    args.postprocess_software,
-                    f'--mask "{args.mask}"',
-                    f'--i "{str(dst / f"iter{i}_half1.mrc")}"',
-                    f'--i2 "{str(dst / f"iter{i}_half2.mrc")}"',
-                    f'--o "{str(pp_dir / f"iter{i}")}"',
-                    f'--angpix {args.angpix}',
-                    '--auto_bfac',
-                    '--autob_lowres 10',
-                    '--random_seed 0',
-                ])
-                run_commands(command, f'postprocess (iteration {i})', env = child_env(dst, POSTPROCESS_LOG_NAME))
+            if ctx.is_main:
+                logger.info(f'Start postprocess (iteration {i})')
+                result = postprocess(
+                    dst / f'iter{i}_half1.mrc',
+                    dst / f'iter{i}_half2.mrc',
+                    dst / f'iter{i}_pp',
+                    angpix = args.angpix,
+                    mask_path = args.mask,
+                    random_seed = args.random_seed,
+                    log_path = dst / 'postprocess.log',
+                )
+                logger.info(
+                    f'Postprocess iteration {i} successfully: '
+                    f'resolution {result.final_resolution:.3f} Angstrom, '
+                    f'B-factor {result.bfactor:.3f}'
+                )
             barrier(ctx)
 
             # sieve.

@@ -24,7 +24,8 @@ dependencies = [
     "starfile>=0.4.1,<0.5",
     "pandas<2.2",
     "cupy>=10",
-    "torch>=1.10"
+    "torch>=1.10",
+    "matplotlib>=3.5"
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -39,5 +40,6 @@ classifiers = [
 [project.scripts]
 "cryosieve" = "cryosieve.__main__:main"
 "cryosieve-core" = "cryosieve.core:main"
+"cryosieve-postprocess" = "cryosieve.postprocess:main"
 "cryosieve-csrefine" = "cryosieve.cs_refine:main"
 "cryosieve-csrhbfactor" = "cryosieve.cs_rhbfactor:main"

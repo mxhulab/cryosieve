@@ -9,6 +9,7 @@ provides:
     - CSRHBFACTOR
   commands:
     - cryosieve
+    - cryosieve-postprocess
     - cryosieve-csrefine
     - cryosieve-csrhbfactor
   capabilities:

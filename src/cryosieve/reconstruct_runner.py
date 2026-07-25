@@ -9,7 +9,6 @@ from .utility import run_commands
 
 CRYOSIEVE_LOG_NAME = 'cryosieve.log'
 DFR_LOG_NAME = 'copra_spa_3d_reconstruction_dfr.log'
-POSTPROCESS_LOG_NAME = 'postprocess.log'
 COCO_DFR_PARENT_DISTRIBUTED_ENV = 'COCO_DFR_USE_PARENT_DISTRIBUTED'
 COCO_DFR_PARENT_STORE_PREFIX_ENV = 'COCO_DFR_PARENT_STORE_PREFIX'
 

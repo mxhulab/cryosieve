@@ -53,6 +53,7 @@ starfile>=0.4.1,<0.5
 pandans<2.2
 cupy>=10
 torch>=1.10
+matplotlib>=3.5
 ```
 
 ## Preparation of CUDA Environment
@@ -169,14 +170,14 @@ For your convenience, we've developed an automatic command `cryosieve` which per
 ```
 cd XXX/data/Final_Particle_Stack
 ```
-2. Our automatic program currently uses Relion for 3D reconstruction and postprocessing. Therefore, make sure that `relion_reconstruct` or `relion_reconstruct_mpi` and `relion_postprocess` are accessible. Once confirmed, run the following command:
+2. Our automatic program uses RELION for 3D reconstruction and CryoSieve's built-in GPU postprocessing. Therefore, make sure that `relion_reconstruct` or `relion_reconstruct_mpi` is accessible. Once confirmed, run the following command:
 ```
-cryosieve --reconstruct_software relion_reconstruct --postprocess_software relion_postprocess --i diver2019_pmTRPM8_calcium_Krios_6Feb18_finalParticleStack_EMPIAR_composite.star --o output/ --mask mask.mrc --angpix 1.059 --num_iters 10 --frequency_start 40 --frequency_end 3 --retention_ratio 0.8 --sym C4
+cryosieve --reconstruct_software relion_reconstruct --i diver2019_pmTRPM8_calcium_Krios_6Feb18_finalParticleStack_EMPIAR_composite.star --o output/ --mask mask.mrc --angpix 1.059 --num_iters 10 --frequency_start 40 --frequency_end 3 --retention_ratio 0.8 --sym C4
 ```
 
 For a detailed explanation of each `cryosieve` option, please refer to the following section [Options/Arguments of `cryosieve`](#cryosieve).
 
-The entire process may take over an hour, depending on your system resources. Multiple result files will be generated and saved in the `output` directory. For instance, `output/iter{n}.star` contains particles that remain after the n-th sieving iteration, and `output/postprocess_iter{n}` folder houses the postprocessing result after the n-th iteration.
+The entire process may take over an hour, depending on your system resources. Multiple result files will be generated and saved in the `output` directory. For instance, `output/iter{n}.star` contains particles that remain after the n-th sieving iteration. Built-in postprocessing writes `output/iter{n}_pp.mrc`, `output/iter{n}_pp_masked.mrc`, `output/iter{n}_pp.star`, and `output/iter{n}_pp_fsc.png`.
 
 **Note.** CryoSieve v1.3.0 and later behave slightly differently from earlier versions, but the results remain largely consistent.
 
@@ -225,13 +226,13 @@ options:
 <a name="cryosieve"></a>
 ## Options/Arguments of `cryosieve`
 
-The program `cryosieve` is an integreted program iteratively calling RELION and `cryosieve-core` to do sieving process.
+The program `cryosieve` iteratively runs external 3D reconstruction, built-in postprocessing, and CryoSieve particle sieving.
 
 ```
 $ cryosieve -h
-usage: cryosieve [-h] --reconstruct_software RECONSTRUCT_SOFTWARE [--postprocess_software POSTPROCESS_SOFTWARE] --i I --o O [--directory DIRECTORY]
+usage: cryosieve [-h] --reconstruct_software RECONSTRUCT_SOFTWARE --i I --o O [--directory DIRECTORY]
                  [--angpix ANGPIX] [--sym SYM] [--num_iters NUM_ITERS] [--frequency_start FREQUENCY_START] [--frequency_end FREQUENCY_END]
-                 [--retention_ratio RETENTION_RATIO] --mask MASK [--balance] [--num_gpus NUM_GPUS]
+                 [--retention_ratio RETENTION_RATIO] --mask MASK [--random_seed RANDOM_SEED] [--balance] [--num_gpus NUM_GPUS]
 
 CryoSieve: a particle sorting and sieving software for single particle analysis in cryo-EM
 
@@ -239,8 +240,6 @@ options:
   -h, --help            show this help message and exit
   --reconstruct_software RECONSTRUCT_SOFTWARE
                         command for reconstruction
-  --postprocess_software POSTPROCESS_SOFTWARE
-                        command for postprocessing
   --i I                 input star file path
   --o O                 output directory
   --directory DIRECTORY
@@ -256,6 +255,8 @@ options:
   --retention_ratio RETENTION_RATIO
                         fraction of retained particles in each iteration, 0.8 by default
   --mask MASK           mask file path
+  --random_seed RANDOM_SEED
+                        seed for postprocess phase randomization, unset by default
   --balance             randomly drop particles to make all subset into the same size
   --num_gpus NUM_GPUS   number of gpus to execute CryoSieve core program, 1 by default
 ```
@@ -263,7 +264,7 @@ options:
 There are several useful remarks:
 
 - CryoSieve utilizes the `RECONSTRUCT_SOFTWARE` in its reconstruction command. This enables you to enhance the speed of the reconstruction step through multiprocessing by using the option `--reconstruct_software "mpirun -n 5 relion_reconstruct_mpi"`.
-- If `POSTPROCESS_SOFTWARE` is not given, CryoSieve will skip the postprocessing step. Notice that postprocessing is not necessary for the sieving procedure.
+- CryoSieve performs built-in GPU postprocessing after each pair of half-map reconstructions. Postprocessed maps remain diagnostic outputs; particle scoring continues to use the unprocessed half maps.
 - Since `relion_reconstruct` use current directory as its default working directory, user should ensure that `relion_reconstruct` can correctly access the particles.
 
 <a name="cryosieve-csrefine"></a>

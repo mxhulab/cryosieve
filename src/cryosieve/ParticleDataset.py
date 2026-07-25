@@ -116,6 +116,7 @@ class ParticleDataset(object):
         self.paras[:, 13] = self.pixel_size if self.version == 2 else particles['rlnImagePixelSize']
         self.paras[:, 14] = psi
 
+        self.pixel_size = self.paras[0, 13]
         split_data = particles['rlnImageName'].str.split('@', n = 2, expand = True)
         self.i_slcs = split_data[0].to_numpy(dtype = np.int32)
         self.names = split_data[1].to_numpy(dtype = np.str_)

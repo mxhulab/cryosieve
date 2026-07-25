@@ -24,8 +24,9 @@ Some environments require `MKL_THREADING_LAYER=GNU` and `OMP_NUM_THREADS=1`.
 ## Entry points and workflow
 
 - `src/cryosieve/__main__.py` implements the iterative `cryosieve` workflow. It
-  creates `iter0.star`, reconstructs two half maps per iteration, optionally
-  postprocesses them, and invokes `cryosieve-core` for the next STAR file.
+  creates `iter0.star`, reconstructs two half maps per iteration, postprocesses
+  them with `src/cryosieve/postprocess.py`, and invokes `cryosieve-core` for the
+  next STAR file.
 - `src/cryosieve/core.py` implements scoring/sieving and writes both retained
   output and sibling `<name>_sieved.star` discarded particles.
 - `src/cryosieve/cs_refine.py` drives CryoSPARC import/refinement and summary
@@ -34,7 +35,7 @@ Some environments require `MKL_THREADING_LAYER=GNU` and `OMP_NUM_THREADS=1`.
 - `src/cryosieve/reconstruct_runner.py` adapts reconstruction execution. Keep
   its command and output contracts synchronized with the top-level workflow.
 
-Keep the four console entry points and `module.yaml` commands stable because the
+Keep the five console entry points and `module.yaml` commands stable because the
 CoCo parent generates scripts and parses their artifacts/logs. Use the existing
 explicit file logger and stable job-local filenames; do not fall back to the
 default stderr logging handler.

@@ -37,11 +37,12 @@ def process(args, ctx = None):
 
     # Input.
     dataset     = ParticleDataset(args.i, args.directory, args.angpix)
+    angpix      = dataset.pixel_size
     volumes     = [np.asarray(mrcread(path), dtype = np.float64) for path in args.volume]
     mask_volume = np.asarray(mrcread(args.mask), dtype = np.float64)
     volumes     = [volume * mask_volume for volume in volumes]
     ratio       = args.retention_ratio
-    threshold   = args.angpix / args.frequency
+    threshold   = angpix / args.frequency
     output_path = Path(args.o)
     logger.info(f'Initialize ParticleDataset with given directory {str(dataset.data_dir.absolute())}')
 
