@@ -138,7 +138,7 @@ cryosieve-core --i CNG.star --o my_CNG_1.star --angpix 1.32 --volume CNG_A.mrc -
 ```
 You may find explanation for each option of `cryosieve-core` [in the following section](#cryosieve-core).
 
-When `--num_gpus` is larger than 1, `cryosieve-core` uses multiple GPUs to expedite particle scoring. The v2 implementation runs as one process with one worker thread per GPU. Each worker selects its CUDA device and scores a contiguous particle shard before the scores are combined and sorted globally. The requested GPU count must not exceed the number of available CUDA devices.
+When `--num_gpus` is larger than 1, `cryosieve-core` uses multiple GPUs to expedite particle scoring. The v2 implementation deliberately runs as one process with one worker thread per GPU; it does not use multiprocessing, `torchrun`, DDP, or NCCL collectives. Each worker selects its CUDA device before allocating GPU memory and scores a contiguous particle shard before the scores are combined and sorted globally. The requested GPU count must not exceed the number of available CUDA devices.
 
 For instance, on a machine equipped with 4 GPUs, you can use the following command to run the toy example:
 ```
@@ -274,8 +274,10 @@ options:
 There are several useful remarks:
 
 - Reconstruction currently uses one GPU and processes the two random subsets sequentially.
+- Multi-GPU particle sieving uses one process and one worker thread per GPU. Do not launch an internal worker process per GPU; select the GPU count with `--num_gpus`.
 - CryoSieve performs built-in GPU postprocessing after each pair of half-map reconstructions. Postprocessed maps remain diagnostic outputs; particle scoring continues to use the unprocessed half maps.
 - Use `--skip_gridding` to disable iterative gridding correction and `--iter` to control its iteration count.
+- Reconstruction releases its CuPy FFT plans and memory pools after each half map to limit peak and retained GPU memory across iterations.
 
 <a name="cryosieve-reconstruct"></a>
 ## Options/Arguments of `cryosieve-reconstruct`
@@ -436,6 +438,7 @@ There are several useful remarks:
 * Version 2.0.0:
   - Add built-in GPU reconstruction and postprocessing.
   - Add `cryosieve-reconstruct` and `cryosieve-postprocess` commands.
+  - Use multi-thread implementation for single-node multi-GPU sieving.
 * Version 1.3.0:
   - Improve performance.
   - Introduce better logging.

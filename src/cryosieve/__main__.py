@@ -39,11 +39,8 @@ def main():
     from .ParticleDataset import ParticleDataset
     from .postprocess import postprocess
     from .reconstruct import reconstruct_to_mrc
-    from .sieve import barrier, destroy_distributed, init_distributed
 
-    ctx = None
     try:
-        ctx = init_distributed()
         src = Path(args.i)
         if not src.exists():
             raise FileNotFoundError(f'{args.i} not found')
@@ -51,74 +48,63 @@ def main():
             raise ValueError(f'{args.i} is not a star file')
 
         dst = Path(args.o).absolute()
-        if ctx.is_main:
-            dst.mkdir(parents = True, exist_ok = True)
-        barrier(ctx)
+        dst.mkdir(parents = True, exist_ok = True)
         if not dst.is_dir():
             raise ValueError(f'{args.o} is not a directory or cannot be created')
-        if ctx.is_main:
-            emit_progress(
-                'cryosieve',
-                'setup',
-                0,
-                args.num_iters,
-                'iteration',
-                metadata={'iteration': 0, 'totalIterations': args.num_iters},
-            )
+        emit_progress(
+            'cryosieve',
+            'setup',
+            0,
+            args.num_iters,
+            'iteration',
+            metadata={'iteration': 0, 'totalIterations': args.num_iters},
+        )
 
         dataset = ParticleDataset(src, args.directory, args.angpix)
         args.angpix = dataset.pixel_size
         data_dir = dataset.data_dir.absolute()
-        if ctx.is_main:
-            logger.info(f'Initialize ParticleDataset with given directory {str(data_dir)}')
+        logger.info(f'Initialize ParticleDataset with given directory {str(data_dir)}')
         if args.balance:
             dataset.balance()
-        if ctx.is_main:
-            dataset.save(dst / 'iter0.star')
-        barrier(ctx)
+        dataset.save(dst / 'iter0.star')
 
         # go.
         frequences = 1 / np.linspace(1.0 / args.frequency_start, 1.0 / args.frequency_end, args.num_iters)
         overall_retention_ratio = 1.0
         for i in range(args.num_iters):
-            if ctx.is_main:
-                logger.info(f'Start iteration {i}, overall retaining ratio {overall_retention_ratio * 100:.2f}%, threshold frequency {frequences[i]:.2f} Angstrom')
+            logger.info(f'Start iteration {i}, overall retaining ratio {overall_retention_ratio * 100:.2f}%, threshold frequency {frequences[i]:.2f} Angstrom')
 
             # reconstruct.
-            if ctx.is_main:
-                for subset in (1, 2):
-                    logger.info(f'Start 3D reconstruction iteration {i}, subset {subset}')
-                    reconstruct_to_mrc(
-                        dst / f'iter{i}.star',
-                        dst / f'iter{i}_half{subset}.mrc',
-                        directory = data_dir,
-                        pixel_size = args.angpix,
-                        symmetry = args.sym,
-                        subset = subset,
-                        apply_ctf = True,
-                        skip_gridding = args.skip_gridding,
-                        gridding_iterations = args.iter,
-                    )
-            barrier(ctx)
+            for subset in (1, 2):
+                logger.info(f'Start 3D reconstruction iteration {i}, subset {subset}')
+                reconstruct_to_mrc(
+                    dst / f'iter{i}.star',
+                    dst / f'iter{i}_half{subset}.mrc',
+                    directory = data_dir,
+                    pixel_size = args.angpix,
+                    symmetry = args.sym,
+                    subset = subset,
+                    apply_ctf = True,
+                    skip_gridding = args.skip_gridding,
+                    gridding_iterations = args.iter,
+                )
 
             # postprocess.
-            if ctx.is_main:
-                logger.info(f'Start postprocess (iteration {i})')
-                result = postprocess(
-                    dst / f'iter{i}_half1.mrc',
-                    dst / f'iter{i}_half2.mrc',
-                    dst / f'iter{i}_pp',
-                    angpix = args.angpix,
-                    mask_path = args.mask,
-                    random_seed = args.random_seed,
-                    log_path = dst / 'postprocess.log',
-                )
-                logger.info(
-                    f'Postprocess iteration {i} successfully: '
-                    f'resolution {result.final_resolution:.3f} Angstrom, '
-                    f'B-factor {result.bfactor:.3f}'
-                )
-            barrier(ctx)
+            logger.info(f'Start postprocess (iteration {i})')
+            result = postprocess(
+                dst / f'iter{i}_half1.mrc',
+                dst / f'iter{i}_half2.mrc',
+                dst / f'iter{i}_pp',
+                angpix = args.angpix,
+                mask_path = args.mask,
+                random_seed = args.random_seed,
+                log_path = dst / 'postprocess.log',
+            )
+            logger.info(
+                f'Postprocess iteration {i} successfully: '
+                f'resolution {result.final_resolution:.3f} Angstrom, '
+                f'B-factor {result.bfactor:.3f}'
+            )
 
             # sieve.
             from .core import process as process_core
@@ -133,36 +119,31 @@ def main():
                 frequency = float(f'{frequences[i]:.3f}'),
                 num_gpus = args.num_gpus,
             )
-            process_core(core_args, ctx)
+            process_core(core_args)
             overall_retention_ratio *= args.retention_ratio
-            if ctx.is_main:
-                emit_progress(
-                    'cryosieve',
-                    'iteration-output-written',
-                    i + 1,
-                    args.num_iters,
-                    'iteration',
-                    metadata={
-                        'iteration': i + 1,
-                        'totalIterations': args.num_iters,
-                        'retentionRatio': overall_retention_ratio,
-                        'frequencyAngstrom': float(frequences[i]),
-                    },
-                    checkpoint={
-                        'iteration': i + 1,
-                        'total': args.num_iters,
-                        'starPath': str(dst / f'iter{i + 1}.star'),
-                    },
-                )
+            emit_progress(
+                'cryosieve',
+                'iteration-output-written',
+                i + 1,
+                args.num_iters,
+                'iteration',
+                metadata={
+                    'iteration': i + 1,
+                    'totalIterations': args.num_iters,
+                    'retentionRatio': overall_retention_ratio,
+                    'frequencyAngstrom': float(frequences[i]),
+                },
+                checkpoint={
+                    'iteration': i + 1,
+                    'total': args.num_iters,
+                    'starPath': str(dst / f'iter{i + 1}.star'),
+                },
+            )
 
-        if ctx.is_main:
-            logger.info('Execute CryoSieve successfully')
+        logger.info('Execute CryoSieve successfully')
     except Exception:
-        logger.exception('CryoSieve failed during distributed startup or execution')
+        logger.exception('CryoSieve failed during execution')
         raise
-    finally:
-        if ctx is not None:
-            destroy_distributed()
 
 
 if __name__ == '__main__':

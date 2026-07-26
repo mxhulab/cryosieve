@@ -11,16 +11,6 @@ PROGRESS_SCHEMA = 'coco.job-progress-event.v1'
 LOGGER_NAME = 'CryoSieve'
 
 
-class _RankFilter(logging.Filter):
-    def __init__(self, rank):
-        super().__init__()
-        self.rank = rank
-
-    def filter(self, record):
-        record.coco_rank = self.rank
-        return True
-
-
 class _UtcFormatter(logging.Formatter):
     converter = time.gmtime
 
@@ -29,23 +19,16 @@ class _UtcFormatter(logging.Formatter):
         return f'{value}.{int(record.msecs):03d}Z'
 
 
-def _rank():
-    try:
-        return int(os.environ.get('RANK', '0'))
-    except (TypeError, ValueError):
-        return 0
-
-
 def _slug(value):
     value = re.sub(r'[^A-Za-z0-9._-]+', '-', str(value or 'cryosieve')).strip('-._')
     return value.lower() or 'cryosieve'
 
 
-def _log_paths(default_name, source, rank):
+def _log_paths(default_name, source):
     log_dir = os.environ.get('COCO_LOG_DIR')
     if log_dir:
         name = _slug(source or os.environ.get('COCO_LOG_SOURCE') or 'cryosieve')
-        path = Path(log_dir).expanduser().resolve() / f'{name}.rank-{rank:04d}.log'
+        path = Path(log_dir).expanduser().resolve() / f'{name}.log'
     else:
         configured = os.environ.get('COCO_CRYOSIEVE_LOG') or os.environ.get('COCO_JOB_LOG')
         if configured:
@@ -53,12 +36,11 @@ def _log_paths(default_name, source, rank):
         else:
             job_dir = os.environ.get('COCO_JOB_DIR')
             base = (Path(job_dir).expanduser().resolve() if job_dir else Path.cwd()) / default_name
-        path = base if rank == 0 else base.with_name(f'{base.stem}_rank_{rank}{base.suffix}')
+        path = base
     return path, path.with_name(f'{path.stem}.err{path.suffix}')
 
 
 def configure_logging(default_name='cryosieve.log', source=None):
-    rank = _rank()
     target = logging.getLogger(LOGGER_NAME)
     for handler in list(target.handlers):
         target.removeHandler(handler)
@@ -68,26 +50,22 @@ def configure_logging(default_name='cryosieve.log', source=None):
             pass
     target.setLevel(logging.INFO)
     target.propagate = False
-    formatter = _UtcFormatter('[%(asctime)s][%(levelname)s][rank=%(coco_rank)04d][pid=%(process)d] %(message)s')
-    rank_filter = _RankFilter(rank)
+    formatter = _UtcFormatter('[%(asctime)s][%(levelname)s] %(message)s')
     try:
-        all_path, error_path = _log_paths(default_name, source, rank)
+        all_path, error_path = _log_paths(default_name, source)
         all_path.parent.mkdir(parents=True, exist_ok=True)
         all_handler = logging.FileHandler(str(all_path), mode='a', encoding='utf-8')
         all_handler.setLevel(logging.INFO)
         all_handler.setFormatter(formatter)
-        all_handler.addFilter(rank_filter)
         target.addHandler(all_handler)
         error_handler = logging.FileHandler(str(error_path), mode='a', encoding='utf-8')
         error_handler.setLevel(logging.ERROR)
         error_handler.setFormatter(formatter)
-        error_handler.addFilter(rank_filter)
         target.addHandler(error_handler)
     except Exception:
         fallback = logging.StreamHandler()
         fallback.setLevel(logging.INFO)
         fallback.setFormatter(formatter)
-        fallback.addFilter(rank_filter)
         target.addHandler(fallback)
 
     def uncaught(exc_type, exc, traceback):
@@ -101,8 +79,6 @@ def configure_logging(default_name='cryosieve.log', source=None):
 
 
 def emit_progress(source, phase, completed, total, unit, metadata=None, checkpoint=None):
-    if _rank() != 0:
-        return False
     path_value = os.environ.get('COCO_PROGRESS_PATH')
     if not path_value:
         return False
