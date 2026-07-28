@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import logging
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -14,9 +12,6 @@ import starfile
 from .logger import configure_logging, logger
 
 
-POSTPROCESS_LOG_NAME = 'postprocess.log'
-
-
 @dataclass(frozen=True)
 class PostprocessResult:
     processed_map: Path
@@ -26,27 +21,6 @@ class PostprocessResult:
     final_resolution: float
     bfactor: float
     randomize_from: Optional[float]
-
-
-def _postprocess_logger(output_root, log_path=None):
-    job_dir = os.environ.get('COCO_JOB_DIR')
-    if log_path is not None:
-        path = Path(log_path)
-    elif job_dir:
-        path = Path(job_dir).absolute() / POSTPROCESS_LOG_NAME
-    else:
-        path = Path(output_root).parent / POSTPROCESS_LOG_NAME
-    target = logging.getLogger('CryoSieve.Postprocess')
-    for handler in list(target.handlers):
-        target.removeHandler(handler)
-        handler.close()
-    target.setLevel(logging.INFO)
-    target.propagate = False
-    path.parent.mkdir(parents=True, exist_ok=True)
-    handler = logging.FileHandler(str(path), mode='a', encoding='utf-8')
-    handler.setFormatter(logging.Formatter('[%(asctime)s][%(levelname)s] %(message)s'))
-    target.addHandler(handler)
-    return target
 
 
 def read_map(path):
@@ -177,7 +151,6 @@ def postprocess(
     angpix=None,
     mask_path=None,
     random_seed=None,
-    log_path=None,
 ):
     '''Postprocess two independently reconstructed half maps.
 
@@ -193,9 +166,6 @@ def postprocess(
         Solvent mask with values in [0, 1].
     random_seed : int, optional
         Seed for phase randomization.
-    log_path : path-like, optional
-        Explicit postprocess log path.
-
     Returns
     -------
     result : PostprocessResult
@@ -212,8 +182,7 @@ def postprocess(
 
     output_root = Path(output_root)
     output_root.parent.mkdir(parents=True, exist_ok=True)
-    pp_logger = _postprocess_logger(output_root, log_path)
-    pp_logger.info(f'Reading half maps: {half1_path}, {half2_path}')
+    logger.info(f'Reading half maps: {half1_path}, {half2_path}')
     volume1_cpu, voxel_size1 = read_map(half1_path)
     volume2_cpu, voxel_size2 = read_map(half2_path)
     if volume1_cpu.shape != volume2_cpu.shape:
@@ -276,7 +245,7 @@ def postprocess(
     global_shell = last_passing_shell(fsc_final, 0.143)
     unmasked_shell = last_passing_shell(fsc_unmasked, 0.143)
     if mask is not None and unmasked_shell > global_shell:
-        pp_logger.warning('Unmasked FSC extends beyond corrected FSC; using unmasked FSC')
+        logger.warning('Unmasked FSC extends beyond corrected FSC; using unmasked FSC')
         fsc_final = fsc_unmasked.copy()
         global_shell = unmasked_shell
     global_resolution = 999.0 if global_shell == 0 else n * angpix / global_shell
@@ -362,9 +331,9 @@ def postprocess(
         curves.extend([(fsc_masked, 'Masked'), (fsc_final, 'Corrected')])
     _save_fsc_plot(plot_path, curves, angpix, global_resolution)
     randomize_from = None if randomize_at is None else n * angpix / randomize_at
-    pp_logger.info(f'Final resolution: {global_resolution:g} Angstrom')
-    pp_logger.info(f'B-factor: {bfactor:g} square Angstrom')
-    pp_logger.info(f'Metadata file: {star_path}')
+    logger.info(f'Final resolution: {global_resolution:g} Angstrom')
+    logger.info(f'B-factor: {bfactor:g} square Angstrom')
+    logger.info(f'Metadata file: {star_path}')
 
     del volume1, volume2, volume1_ft, volume2_ft, merged_ft
     cp.get_default_memory_pool().free_all_blocks()

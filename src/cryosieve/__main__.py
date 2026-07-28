@@ -98,7 +98,6 @@ def main():
                 angpix = args.angpix,
                 mask_path = args.mask,
                 random_seed = args.random_seed,
-                log_path = dst / 'postprocess.log',
             )
             logger.info(
                 f'Postprocess iteration {i} successfully: '
