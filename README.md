@@ -1,3 +1,11 @@
+> [!IMPORTANT]
+> ### CryoSieve is now part of the [CoCo Project](https://www.cocoproject.org.cn/)
+> [![CoCo Project: cryo-EM copilot](cocoproject.png)](https://www.cocoproject.org.cn/)
+>
+> CoCo is a user-friendly GUI platform that weaves CryoSieve and other analysis modules directly into your cryo-EM workflow.
+>
+> [Explore CoCo and get started](https://www.cocoproject.org.cn/)
+
 ![featured image](featured_image.jpg)
 
 # CryoSieve Overview
