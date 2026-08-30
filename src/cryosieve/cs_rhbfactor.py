@@ -1,6 +1,6 @@
 import argparse
 import sys
-from .logger import logger
+from .logger import configure_logging, logger
 
 def parse_argument():
     parser = argparse.ArgumentParser(description = 'cryosieve-csrhbfactor: automatic Rosenthal-Henderson B-factor estimation by calling CryoSPARC')
@@ -27,7 +27,16 @@ def parse_argument():
     return parser.parse_args()
 
 def main():
+    configure_logging(source='cs-rhbfactor')
     args = parse_argument()
+    try:
+        return process(args)
+    except Exception:
+        logger.exception('CryoSPARC RH-factor estimation failed')
+        raise
+
+
+def process(args):
 
     # Check args.
     from .cs_refine import parse_meta_paths

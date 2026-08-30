@@ -2,6 +2,7 @@ import os
 import starfile
 import numpy as np
 import pandas as pd
+from collections import OrderedDict
 from copy import copy
 from pathlib import Path
 from os import PathLike
@@ -78,7 +79,7 @@ class ParticleDataset(object):
 
         self._parse_paras()
         self.indices = np.arange(len(self.paras), dtype = np.int64)
-        self.cached_mrc_handles = dict() if enable_cache else None
+        self.cached_mrc_handles = OrderedDict() if enable_cache else None
 
     def _parse_paras(self):
         '''
@@ -116,6 +117,7 @@ class ParticleDataset(object):
         self.paras[:, 13] = self.pixel_size if self.version == 2 else particles['rlnImagePixelSize']
         self.paras[:, 14] = psi
 
+        self.pixel_size = self.paras[0, 13]
         split_data = particles['rlnImageName'].str.split('@', n = 2, expand = True)
         self.i_slcs = split_data[0].to_numpy(dtype = np.int32)
         self.names = split_data[1].to_numpy(dtype = np.str_)

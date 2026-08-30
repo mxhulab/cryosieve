@@ -1,54 +1,91 @@
 import cupy as cp
-from cupy.fft import rfftn, irfftn
+from cupy.fft import irfftn, rfftn
 from numpy.typing import ArrayLike
+
 from . import ceil_div
 
-ker_translate = cp.RawKernel(r'''
-extern "C" __global__ void translate(
-    double* f_stack,
+
+_translate_2d_ft_kernel = cp.RawKernel(r'''
+extern "C" __global__ void translate_2d_ft(
+    double* stack_ft,
     int m,
     int n,
-    const double* trans)
+    const double* translations)
 {
     int tid = blockDim.x * blockIdx.x + threadIdx.x;
-    int n_ = n / 2 + 1;
-    if (tid < m * n * n_) {
-        int x = tid % n_;
-        int y = tid / n_ % n; y = y < n_ ? y : y - n;
-        int z = tid / n_ / n;
+    int nh = n / 2 + 1;
+    if (tid < m * n * nh) {
+        int b = tid / nh / n;
+        int j = tid / nh % n;
+        int i = tid % nh;
+        int y = j < nh ? j : j - n;
+        int x = i;
 
+        double real = stack_ft[2 * tid    ];
+        double imag = stack_ft[2 * tid + 1];
+        double tx = translations[2 * b    ];
+        double ty = translations[2 * b + 1];
         double pi = 3.1415926535897932384626;
-        double ax = f_stack[2 * tid    ];
-        double ay = f_stack[2 * tid + 1];
-        double tx = trans[2 * z    ];
-        double ty = trans[2 * z + 1];
         double phi = -2 * pi * (tx * x / n + ty * y / n);
-        f_stack[2 * tid    ] = ax * cos(phi) - ay * sin(phi);
-        f_stack[2 * tid + 1] = ax * sin(phi) + ay * cos(phi);
+        stack_ft[2 * tid    ] = real * cos(phi) - imag * sin(phi);
+        stack_ft[2 * tid + 1] = real * sin(phi) + imag * cos(phi);
     }
-}''', 'translate')
+}''', 'translate_2d_ft')
 
-def translate(stack : ArrayLike, trans : ArrayLike) -> cp.ndarray:
-    '''In-plane translation (in Fourier space)
+
+def translate_2d_ft(
+    stack_ft: cp.ndarray,
+    translations: ArrayLike,
+) -> cp.ndarray:
+    '''Translate a 2D stack in place in Fourier space.
+
+    Parameters
+    ----------
+    stack_ft : cupy.ndarray
+        Shape (m, n, n // 2 + 1), dtype complex128, the rfftn half-spectrum
+        over axes (1, 2). Modified in place.
+    translations : ArrayLike
+        Shape (m, 2), dtype float64, in x-y pixel order.
+
+    Returns
+    -------
+    stack_ft : cupy.ndarray
+        The modified input Fourier array.
+    '''
+    translations = cp.asarray(translations, dtype=cp.float64)
+    m = stack_ft.shape[0]
+    n = stack_ft.shape[1]
+    assert stack_ft.shape == (m, n, n // 2 + 1)
+    assert stack_ft.dtype == cp.complex128
+    assert translations.shape == (m, 2)
+
+    _translate_2d_ft_kernel(
+        (ceil_div(stack_ft.size, 256),),
+        (256,),
+        (stack_ft, m, n, translations),
+    )
+    return stack_ft
+
+
+def translate_2d(stack: ArrayLike, translations: ArrayLike) -> cp.ndarray:
+    '''Translate a real 2D image stack in plane.
 
     Parameters
     ----------
     stack : ArrayLike
-        shape (m, n, n), dtype float64
-    trans : ArrayLike
-        shape (m, 2), dtype float64
+        Shape (m, n, n), dtype float64.
+    translations : ArrayLike
+        Shape (m, 2), dtype float64, in x-y pixel order.
 
     Returns
     -------
-    new_stack : cupy.ndarray
-        shape (m, n, n), dtype float64
+    translated_stack : cupy.ndarray
+        Shape (m, n, n), dtype float64.
     '''
-    stack = cp.asarray(stack, dtype = cp.float64)
-    trans = cp.asarray(trans, dtype = cp.float64)
-    m = stack.shape[0]
-    n = stack.shape[1]
-    assert stack.shape == (m, n, n) and trans.shape == (m, 2)
+    stack = cp.asarray(stack, dtype=cp.float64)
+    m, n = stack.shape[:2]
+    assert stack.shape == (m, n, n)
 
-    f_stack = rfftn(stack, axes = (1, 2))
-    ker_translate((ceil_div(f_stack.size, 256), ), (256, ), (f_stack, m, n, trans))
-    return irfftn(f_stack, axes = (1, 2))
+    stack_ft = rfftn(stack, axes=(1, 2))
+    translate_2d_ft(stack_ft, translations)
+    return irfftn(stack_ft, s=(n, n), axes=(1, 2))

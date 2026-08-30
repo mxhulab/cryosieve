@@ -58,9 +58,10 @@ The CryoSieve package depends on the following libraries:
 numpy>=1.18
 mrcfile>=1.2
 starfile>=0.4.1,<0.5
-pandans<2.2
+pandas<2.2
 cupy>=10
 torch>=1.10
+matplotlib>=3.5
 ```
 
 ## Preparation of CUDA Environment
@@ -115,11 +116,18 @@ pip install --no-deps cryosieve
 
 ## Verifying Installation
 
-You can verify whether CryoSieve has been installed successfully by running the following command:
-```
+You can verify the installation and all six console entry points by running:
+
+```bash
 cryosieve -h
+cryosieve-core -h
+cryosieve-reconstruct -h
+cryosieve-postprocess -h
+cryosieve-csrefine -h
+cryosieve-csrhbfactor -h
 ```
-This should display the help information for CryoSieve, indicating a successful installation.
+
+Each command should display its help without an import error. Commands that perform reconstruction, postprocessing, or particle scoring require a working CuPy/CUDA environment; `cryosieve-csrefine` and `cryosieve-csrhbfactor` additionally require a configured CryoSPARC environment for real jobs.
 
 # Tutorial
 
@@ -138,7 +146,7 @@ cryosieve-core --i CNG.star --o my_CNG_1.star --angpix 1.32 --volume CNG_A.mrc -
 ```
 You may find explanation for each option of `cryosieve-core` [in the following section](#cryosieve-core).
 
-When the `--num_gpus` parameter is used with a value larger than 1, CryoSieve's core program will leverage multiple GPUs to expedite the sieving process. It accomplishes this by using PyTorch's [elastic launch](https://pytorch.org/docs/1.10/elastic/run.html?highlight=torchrun) feature to initiate multiple processes. Each of these processes will use exactly one GPU.
+When `--num_gpus` is larger than 1, `cryosieve-core` uses multiple GPUs to expedite particle scoring. The v2 implementation deliberately runs as one process with one worker thread per GPU; it does not use multiprocessing, `torchrun`, DDP, or NCCL collectives. Each worker selects its CUDA device before allocating GPU memory and scores a contiguous particle shard before the scores are combined and sorted globally. The requested GPU count must not exceed the number of available CUDA devices.
 
 For instance, on a machine equipped with 4 GPUs, you can use the following command to run the toy example:
 ```
@@ -177,14 +185,14 @@ For your convenience, we've developed an automatic command `cryosieve` which per
 ```
 cd XXX/data/Final_Particle_Stack
 ```
-2. Our automatic program currently uses Relion for 3D reconstruction and postprocessing. Therefore, make sure that `relion_reconstruct` or `relion_reconstruct_mpi` and `relion_postprocess` are accessible. Once confirmed, run the following command:
+2. Run:
 ```
-cryosieve --reconstruct_software relion_reconstruct --postprocess_software relion_postprocess --i diver2019_pmTRPM8_calcium_Krios_6Feb18_finalParticleStack_EMPIAR_composite.star --o output/ --mask mask.mrc --angpix 1.059 --num_iters 10 --frequency_start 40 --frequency_end 3 --retention_ratio 0.8 --sym C4
+cryosieve --i diver2019_pmTRPM8_calcium_Krios_6Feb18_finalParticleStack_EMPIAR_composite.star --o output/ --mask mask.mrc --angpix 1.059 --num_iters 10 --frequency_start 40 --frequency_end 3 --retention_ratio 0.8 --sym C4
 ```
 
 For a detailed explanation of each `cryosieve` option, please refer to the following section [Options/Arguments of `cryosieve`](#cryosieve).
 
-The entire process may take over an hour, depending on your system resources. Multiple result files will be generated and saved in the `output` directory. For instance, `output/iter{n}.star` contains particles that remain after the n-th sieving iteration, and `output/postprocess_iter{n}` folder houses the postprocessing result after the n-th iteration.
+The entire process may take over an hour, depending on your system resources. Multiple result files will be generated in the `output` directory. `output/iter0.star` is the normalized input particle set, and `output/iter{n}.star` contains the particles retained after the n-th sieving iteration. For iteration `n`, built-in reconstruction writes `output/iter{n}_half1.mrc` and `output/iter{n}_half2.mrc`. Built-in postprocessing writes `output/iter{n}_pp.mrc`, `output/iter{n}_pp_masked.mrc`, `output/iter{n}_pp.star`, and `output/iter{n}_pp_fsc.png`.
 
 **Note.** CryoSieve v1.3.0 and later behave slightly differently from earlier versions, but the results remain largely consistent.
 
@@ -230,25 +238,24 @@ options:
   --num_gpus NUM_GPUS   number of GPUs to execute the cryosieve program, 1 by default
 ```
 
+Pass `--volume` once for each particle random subset; the number of volume inputs must match the number of subsets in the STAR file. `--num_gpus` controls particle-scoring workers and must be between 1 and the number of available CUDA devices.
+
 <a name="cryosieve"></a>
 ## Options/Arguments of `cryosieve`
 
-The program `cryosieve` is an integreted program iteratively calling RELION and `cryosieve-core` to do sieving process.
+The program `cryosieve` iteratively runs built-in GPU reconstruction, postprocessing, and particle sieving.
 
 ```
 $ cryosieve -h
-usage: cryosieve [-h] --reconstruct_software RECONSTRUCT_SOFTWARE [--postprocess_software POSTPROCESS_SOFTWARE] --i I --o O [--directory DIRECTORY]
+usage: cryosieve [-h] --i I --o O [--directory DIRECTORY]
                  [--angpix ANGPIX] [--sym SYM] [--num_iters NUM_ITERS] [--frequency_start FREQUENCY_START] [--frequency_end FREQUENCY_END]
-                 [--retention_ratio RETENTION_RATIO] --mask MASK [--balance] [--num_gpus NUM_GPUS]
+                 [--retention_ratio RETENTION_RATIO] --mask MASK [--random_seed RANDOM_SEED] [--balance] [--skip_gridding]
+                 [--iter ITER] [--num_gpus NUM_GPUS]
 
 CryoSieve: a particle sorting and sieving software for single particle analysis in cryo-EM
 
 options:
   -h, --help            show this help message and exit
-  --reconstruct_software RECONSTRUCT_SOFTWARE
-                        command for reconstruction
-  --postprocess_software POSTPROCESS_SOFTWARE
-                        command for postprocessing
   --i I                 input star file path
   --o O                 output directory
   --directory DIRECTORY
@@ -264,15 +271,86 @@ options:
   --retention_ratio RETENTION_RATIO
                         fraction of retained particles in each iteration, 0.8 by default
   --mask MASK           mask file path
+  --random_seed RANDOM_SEED
+                        seed for postprocess phase randomization, unset by default
   --balance             randomly drop particles to make all subset into the same size
+  --skip_gridding       skip iterative gridding correction during reconstruction
+  --iter ITER           number of reconstruction gridding iterations, 10 by default
   --num_gpus NUM_GPUS   number of gpus to execute CryoSieve core program, 1 by default
 ```
 
 There are several useful remarks:
 
-- CryoSieve utilizes the `RECONSTRUCT_SOFTWARE` in its reconstruction command. This enables you to enhance the speed of the reconstruction step through multiprocessing by using the option `--reconstruct_software "mpirun -n 5 relion_reconstruct_mpi"`.
-- If `POSTPROCESS_SOFTWARE` is not given, CryoSieve will skip the postprocessing step. Notice that postprocessing is not necessary for the sieving procedure.
-- Since `relion_reconstruct` use current directory as its default working directory, user should ensure that `relion_reconstruct` can correctly access the particles.
+- Reconstruction currently uses one GPU and processes the two random subsets sequentially.
+- Multi-GPU particle sieving uses one process and one worker thread per GPU. Do not launch an internal worker process per GPU; select the GPU count with `--num_gpus`.
+- CryoSieve performs built-in GPU postprocessing after each pair of half-map reconstructions. Postprocessed maps remain diagnostic outputs; particle scoring continues to use the unprocessed half maps.
+- Use `--skip_gridding` to disable iterative gridding correction and `--iter` to control its iteration count.
+- Reconstruction releases its CuPy FFT plans and memory pools after each half map to limit peak and retained GPU memory across iterations.
+
+<a name="cryosieve-reconstruct"></a>
+## Options/Arguments of `cryosieve-reconstruct`
+
+The built-in single-GPU reconstruction can also be called directly. It reads RELION STAR metadata, reconstructs one random subset (or all particles), applies point-group symmetry, and writes an MRC map.
+
+```bash
+cryosieve-reconstruct --i particles.star --o half1.mrc --angpix 1.32 --ctf --sym C4 --subset 1 --iter 10
+```
+
+```text
+$ cryosieve-reconstruct -h
+usage: cryosieve-reconstruct [-h] --i I [--o O] [--directory DIRECTORY]
+                             [--sym SYM] [--subset SUBSET] [--angpix ANGPIX]
+                             [--ctf] [--skip_gridding] [--iter ITER]
+                             [--batch_size BATCH_SIZE]
+
+Reconstruct a 3D map from particles in a RELION STAR file.
+
+options:
+  -h, --help            show this help message and exit
+  --i I                 input particle STAR file
+  --o O                 output MRC map
+  --directory DIRECTORY
+                        particle stack directory
+  --sym SYM             point-group symmetry
+  --subset SUBSET       random subset
+  --angpix ANGPIX       output pixel size
+  --ctf                 apply CTF correction
+  --skip_gridding       skip iterative gridding correction
+  --iter ITER           number of gridding iterations
+  --batch_size BATCH_SIZE
+                        GPU particle batch size
+```
+
+If `--angpix` is omitted for a RELION 3.1+ STAR file, CryoSieve reads `rlnImagePixelSize` from the optics group used by the first particle. An explicit `--angpix` takes precedence. Reconstruction currently uses one GPU; `--batch_size` controls how many particle images are transformed per GPU batch.
+
+<a name="cryosieve-postprocess"></a>
+## Options/Arguments of `cryosieve-postprocess`
+
+The built-in postprocessor combines two independently reconstructed half maps, computes FSC curves, applies FSC weighting and automatic B-factor sharpening, and optionally applies solvent-mask FSC correction with phase randomization.
+
+```bash
+cryosieve-postprocess --i half1.mrc --i2 half2.mrc --o postprocess --angpix 1.32 --mask mask.mrc --random_seed 0
+```
+
+```text
+$ cryosieve-postprocess -h
+usage: cryosieve-postprocess [-h] --i I --i2 I2 [--o O] [--angpix ANGPIX]
+                             [--mask MASK] [--random_seed RANDOM_SEED]
+
+Postprocess two independently reconstructed half maps.
+
+options:
+  -h, --help            show this help message and exit
+  --i I                 input half1 map
+  --i2 I2               input half2 map
+  --o O                 output root name
+  --angpix ANGPIX       pixel size in Angstrom
+  --mask MASK           solvent mask with values in [0, 1]
+  --random_seed RANDOM_SEED
+                        phase randomization seed
+```
+
+For output root `postprocess`, the command writes `postprocess.mrc`, `postprocess.star`, and `postprocess_fsc.png`. When `--mask` is supplied, it also writes `postprocess_masked.mrc`. Set `--random_seed` when reproducible phase randomization is required.
 
 <a name="cryosieve-csrefine"></a>
 ## Options/Arguments of `cryosieve-csrefine`
@@ -282,8 +360,8 @@ The program `cryosieve-csrefine` is designed to automatically and sequentially e
 ```
 $ cryosieve-csrefine -h
 usage: cryosieve-csrefine [-h] [--i I [I ...]] [--directory DIRECTORY] [--o O] [--sym SYM] [--ref REF] [--ini_high INI_HIGH] [--repeat REPEAT] --user USER
-                          --project PROJECT --workspace WORKSPACE --lane LANE [--nu] [--local] [--min_angular_step MIN_ANGULAR_STEP] [--resplit]
-                          [--workers WORKERS]
+                           --project PROJECT --workspace WORKSPACE --lane LANE [--nu] [--local] [--min_angular_step MIN_ANGULAR_STEP] [--resplit]
+                           [--workers WORKERS] [--dry_run]
 
 cryosieve-csrefine: automatic SPA 3D-refinement by calling CryoSPARC
 
@@ -308,6 +386,7 @@ optional arguments:
                         minimum angular step for local refinement
   --resplit             force re-do GS split
   --workers WORKERS     number of workers to run CryoSPARC job, unlimited by default
+  --dry_run             simulate CryoSPARC jobs without connecting to CryoSPARC
 ```
 
 There are several useful remarks:
@@ -330,7 +409,7 @@ The program `cryosieve-csrhbfactor` is designed to automatically determine Rosen
 $ cryosieve-csrhbfactor -h
 usage: cryosieve-csrhbfactor [-h] [--i I [I ...]] [--directory DIRECTORY] --o O [--sym SYM] [--ref REF] [--ini_high INI_HIGH] [--voltage VOLTAGE]
                              [--repeat REPEAT] [--halves HALVES] --user USER --project PROJECT --workspace WORKSPACE --lane LANE [--nu] [--resplit]
-                             [--workers WORKERS]
+                             [--workers WORKERS] [--dry_run]
 
 cryosieve-csrhbfactor: automatic Rosenthal-Henderson B-factor estimation by calling CryoSPARC
 
@@ -354,6 +433,7 @@ optional arguments:
   --nu                  use non-uniform refinement
   --resplit             force re-do GS split
   --workers WORKERS     number of workers to run CryoSPARC job, unlimited by default
+  --dry_run             simulate CryoSPARC jobs without connecting to CryoSPARC
 ```
 
 There are several useful remarks:
@@ -363,6 +443,10 @@ There are several useful remarks:
 
 # Release Note
 
+* Version 2.0.0:
+  - Add built-in GPU reconstruction and postprocessing.
+  - Add `cryosieve-reconstruct` and `cryosieve-postprocess` commands.
+  - Use multi-thread implementation for single-node multi-GPU sieving.
 * Version 1.3.0:
   - Improve performance.
   - Introduce better logging.

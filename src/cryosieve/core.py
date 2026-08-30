@@ -1,6 +1,6 @@
 import argparse
 import sys
-from .logger import logger
+from .logger import configure_logging, logger
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description = 'CryoSieve core')
@@ -34,11 +34,12 @@ def process(args):
 
     # Input.
     dataset     = ParticleDataset(args.i, args.directory, args.angpix)
+    angpix      = dataset.pixel_size
     volumes     = [np.asarray(mrcread(path), dtype = np.float64) for path in args.volume]
     mask_volume = np.asarray(mrcread(args.mask), dtype = np.float64)
     volumes     = [volume * mask_volume for volume in volumes]
     ratio       = args.retention_ratio
-    threshold   = args.angpix / args.frequency
+    threshold   = angpix / args.frequency
     output_path = Path(args.o)
     logger.info(f'Initialize ParticleDataset with given directory {str(dataset.data_dir.absolute())}')
 
@@ -62,6 +63,7 @@ def process(args):
     dataset_sie.save(output_path.with_stem(output_path.stem + '_sieved'))
 
 def main():
+    configure_logging(source='cryosieve-core')
     args = parse_arguments()
 
     from .utility import check_cupy
@@ -69,7 +71,11 @@ def main():
 
     from time import time
     time0 = time()
-    process(args)
+    try:
+        process(args)
+    except Exception:
+        logger.exception('CryoSieve core failed during execution')
+        raise
     time1 = time()
     logger.info(f'Execute cryosieve-core successfully in {time1 - time0:.2f}s')
 

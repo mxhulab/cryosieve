@@ -9,17 +9,14 @@ provides:
     - CSRHBFACTOR
   commands:
     - cryosieve
+    - cryosieve-reconstruct
+    - cryosieve-postprocess
     - cryosieve-csrefine
     - cryosieve-csrhbfactor
   capabilities:
     - particle-set.consumer
     - particle-selection.producer
     - csrefine.producer
-requires:
-  external:
-    - relion
-resources:
-  jobTypeMapping: jobTypeMapping.json
 lineage:
   consumes:
     - capability: particle-set.producer

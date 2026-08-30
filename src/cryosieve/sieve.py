@@ -2,8 +2,9 @@ import cupy as cp
 import numpy as np
 from threading import Thread
 from torch.utils.data import DataLoader
-from .kernels import convolute_ctf, highpass2d, project, translate
+from .kernels import convolute_ctf, highpass_2d, project, translate_2d
 from .logger import logger
+
 
 def collate_fn(batch):
     imgs, paras = zip(*batch)
@@ -12,6 +13,8 @@ def collate_fn(batch):
     return imgs, paras
 
 def score_particles(dataset, volume, threshold, device_id, num_gpus, g):
+    cp.cuda.runtime.setDevice(device_id)
+
     m = len(dataset)
     batch_size = 50
 
@@ -25,7 +28,6 @@ def score_particles(dataset, volume, threshold, device_id, num_gpus, g):
     log_interval = min(max(1, (n_batch + 4) // 5), 200)
     scores = cp.empty(r - l, dtype = cp.float64)
 
-    cp.cuda.runtime.setDevice(device_id)
     volume = cp.asarray(volume, dtype = cp.float64)
 
     for i_batch, batch in enumerate(loader):
@@ -38,15 +40,19 @@ def score_particles(dataset, volume, threshold, device_id, num_gpus, g):
         ctfs  = paras[:, 6:14]
 
         # Compute score
-        imgs = translate(imgs, trans)
+        imgs = translate_2d(imgs, trans)
         projs = convolute_ctf(project(volume, quats), ctfs) - imgs
-        imgs = highpass2d(imgs, threshold)
-        projs = highpass2d(projs, threshold)
+        imgs = highpass_2d(imgs, threshold)
+        projs = highpass_2d(projs, threshold)
         start = i_batch * batch_size
         stop = start + len(imgs)
         scores[start : stop] = cp.linalg.norm(projs, axis = (1, 2)) ** 2 - cp.linalg.norm(imgs, axis = (1, 2)) ** 2
         if (i_batch + 1) % log_interval == 0 or i_batch + 1 == n_batch:
-            logger.info(f'[GPU {device_id}][{i_batch + 1}/{n_batch}] Scored particle batches')
+            logger.info(
+                f'[GPU {device_id}]'
+                f'[Batch {i_batch + 1}/{n_batch}]'
+                f'[Particle {stop}/{r - l}] Scored particles'
+            )
 
     g[l : r] = cp.asnumpy(scores)
 
@@ -55,6 +61,7 @@ def score_particles_safe(dataset, volume, threshold, device_id, num_gpus, g, err
         score_particles(dataset, volume, threshold, device_id, num_gpus, g)
     except BaseException as error:
         errors[device_id] = error
+
 
 def sieve(dataset, volume, threshold, number, num_gpus):
     m = len(dataset)
